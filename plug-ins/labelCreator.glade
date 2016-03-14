@@ -1,0 +1,244 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!-- Generated with glade 3.18.3 -->
+<interface>
+  <requires lib="gtk+" version="2.0"/>
+  <object class="GtkListStore" id="liststore_labels">
+    <columns>
+      <!-- column-name Classification -->
+      <column type="gchararray"/>
+    </columns>
+    <data>
+      <row>
+        <col id="0">Negative</col>
+      </row>
+      <row>
+        <col id="0">Stair</col>
+      </row>
+      <row>
+        <col id="0">Curb</col>
+      </row>
+      <row>
+        <col id="0">Doorframe</col>
+      </row>
+      <row>
+        <col id="0">BadFloor</col>
+      </row>
+    </data>
+  </object>
+  <object class="GtkRadioButton" id="rdbtn_group_bbnp">
+    <property name="label" translatable="yes">radiobutton</property>
+    <property name="can_focus">False</property>
+    <property name="receives_default">False</property>
+    <property name="xalign">0.5</property>
+    <property name="active">True</property>
+    <property name="draw_indicator">False</property>
+  </object>
+  <object class="GtkWindow" id="addLabelsWindow">
+    <property name="can_focus">False</property>
+    <signal name="destroy" handler="on_addLabelsWindow_destroy" swapped="no"/>
+    <child>
+      <object class="GtkVBox" id="box_main">
+        <property name="visible">True</property>
+        <property name="can_focus">False</property>
+        <child>
+          <object class="GtkHBox" id="bx_top">
+            <property name="visible">True</property>
+            <property name="can_focus">False</property>
+            <property name="homogeneous">True</property>
+            <child>
+              <object class="GtkVBox" id="bx_radiosel">
+                <property name="visible">True</property>
+                <property name="can_focus">False</property>
+                <property name="homogeneous">True</property>
+                <child>
+                  <object class="GtkRadioButton" id="rbtn_bb">
+                    <property name="label" translatable="yes">Only Bounding Box</property>
+                    <property name="visible">True</property>
+                    <property name="can_focus">True</property>
+                    <property name="receives_default">False</property>
+                    <property name="xalign">0</property>
+                    <property name="active">True</property>
+                    <property name="draw_indicator">True</property>
+                    <property name="group">rdbtn_group_bbnp</property>
+                  </object>
+                  <packing>
+                    <property name="expand">True</property>
+                    <property name="fill">True</property>
+                    <property name="position">0</property>
+                  </packing>
+                </child>
+                <child>
+                  <object class="GtkRadioButton" id="rbtn_np">
+                    <property name="label" translatable="yes">Only Nearest Point</property>
+                    <property name="visible">True</property>
+                    <property name="can_focus">True</property>
+                    <property name="receives_default">False</property>
+                    <property name="xalign">0</property>
+                    <property name="active">True</property>
+                    <property name="draw_indicator">True</property>
+                    <property name="group">rdbtn_group_bbnp</property>
+                    <signal name="toggled" handler="on_rbtn_np_toggled" swapped="no"/>
+                  </object>
+                  <packing>
+                    <property name="expand">True</property>
+                    <property name="fill">True</property>
+                    <property name="position">1</property>
+                  </packing>
+                </child>
+              </object>
+              <packing>
+                <property name="expand">False</property>
+                <property name="fill">True</property>
+                <property name="position">0</property>
+              </packing>
+            </child>
+            <child>
+              <object class="GtkVBox" id="bx_combo">
+                <property name="visible">True</property>
+                <property name="can_focus">False</property>
+                <property name="homogeneous">True</property>
+                <child>
+                  <object class="GtkLabel" id="label_combo">
+                    <property name="visible">True</property>
+                    <property name="can_focus">False</property>
+                    <property name="tooltip_text" translatable="yes">Select a label from the drop box to start. Applicable buttons will be enabled.</property>
+                    <property name="xpad">10</property>
+                    <property name="label">Select Classification Label</property>
+                    <property name="justify">right</property>
+                  </object>
+                  <packing>
+                    <property name="expand">False</property>
+                    <property name="fill">True</property>
+                    <property name="position">0</property>
+                  </packing>
+                </child>
+                <child>
+                  <object class="GtkComboBox" id="cbx_labels">
+                    <property name="visible">True</property>
+                    <property name="can_focus">False</property>
+                    <property name="tooltip_text" translatable="yes">Select a label from this drop box to start. Applicable buttons will be enabled.</property>
+                    <property name="model">liststore_labels</property>
+                    <signal name="changed" handler="on_cbx_labels_changed" swapped="no"/>
+                    <child>
+                      <object class="GtkCellRendererText" id="cellrenderertext1"/>
+                      <attributes>
+                        <attribute name="text">0</attribute>
+                      </attributes>
+                    </child>
+                  </object>
+                  <packing>
+                    <property name="expand">False</property>
+                    <property name="fill">True</property>
+                    <property name="position">1</property>
+                  </packing>
+                </child>
+              </object>
+              <packing>
+                <property name="expand">False</property>
+                <property name="fill">True</property>
+                <property name="position">1</property>
+              </packing>
+            </child>
+          </object>
+          <packing>
+            <property name="expand">False</property>
+            <property name="fill">True</property>
+            <property name="position">0</property>
+          </packing>
+        </child>
+        <child>
+          <object class="GtkVBox" id="bx_buttons">
+            <property name="width_request">300</property>
+            <property name="visible">True</property>
+            <property name="can_focus">False</property>
+            <property name="homogeneous">True</property>
+            <child>
+              <object class="GtkButton" id="add_label">
+                <property name="label" translatable="yes">Add Selected Label</property>
+                <property name="visible">True</property>
+                <property name="can_focus">True</property>
+                <property name="receives_default">True</property>
+                <property name="tooltip_text" translatable="yes">Add selected classification label to the image. A new image layer will be created and addBB/addNP buttons will be enabled. For 'negative' class label, image layer is not created since BB or NP don't apply to negative class.</property>
+                <signal name="clicked" handler="on_add_label_clicked" swapped="no"/>
+              </object>
+              <packing>
+                <property name="expand">False</property>
+                <property name="fill">True</property>
+                <property name="position">0</property>
+              </packing>
+            </child>
+            <child>
+              <object class="GtkButton" id="add_bb">
+                <property name="label" translatable="yes">Add BB for the Selected Label</property>
+                <property name="visible">True</property>
+                <property name="can_focus">True</property>
+                <property name="receives_default">False</property>
+                <property name="tooltip_text" translatable="yes">A classification label is already added to the image. Select the class object in the image with selection tools as accurately as you can. After that click this button to add a tight bounding box (BB) for that object. The BB is saved in the image layer belonging to the class.</property>
+                <signal name="clicked" handler="on_add_bb_clicked" swapped="no"/>
+              </object>
+              <packing>
+                <property name="expand">False</property>
+                <property name="fill">True</property>
+                <property name="position">1</property>
+              </packing>
+            </child>
+            <child>
+              <object class="GtkButton" id="add_np">
+                <property name="label" translatable="yes">Add Nearest Point (NP) for the Selected Label</property>
+                <property name="visible">True</property>
+                <property name="can_focus">True</property>
+                <property name="receives_default">False</property>
+                <property name="tooltip_text" translatable="yes">A classification label is already added to the image. Select the approximate nearest point of the class object in the image with selection tools (smallest selection possible). After that click this button to add the nearest point (NP). The NP is saved in the image layer belonging to the class.</property>
+                <signal name="clicked" handler="on_add_np_clicked" swapped="no"/>
+              </object>
+              <packing>
+                <property name="expand">False</property>
+                <property name="fill">True</property>
+                <property name="position">2</property>
+              </packing>
+            </child>
+            <child>
+              <object class="GtkButton" id="delete_label">
+                <property name="label" translatable="yes">Delete Selected Label (and BB/NP)</property>
+                <property name="visible">True</property>
+                <property name="can_focus">True</property>
+                <property name="receives_default">False</property>
+                <property name="tooltip_text" translatable="yes">Clicking this button will delete the label completely from this image. The corresponding parasite data as well as image layer will be removed. Use this to start from scratch for a label or simply to remove the label if it was added by mistake.</property>
+                <signal name="clicked" handler="on_delete_label_clicked" swapped="no"/>
+              </object>
+              <packing>
+                <property name="expand">False</property>
+                <property name="fill">True</property>
+                <property name="position">3</property>
+              </packing>
+            </child>
+          </object>
+          <packing>
+            <property name="expand">False</property>
+            <property name="fill">True</property>
+            <property name="position">1</property>
+          </packing>
+        </child>
+        <child>
+          <object class="GtkButton" id="quit_button">
+            <property name="label">gtk-quit</property>
+            <property name="width_request">100</property>
+            <property name="height_request">30</property>
+            <property name="visible">True</property>
+            <property name="can_focus">True</property>
+            <property name="receives_default">True</property>
+            <property name="tooltip_text" translatable="yes">Quit Label Creator. Remember to save the image manually (CTRL-S).</property>
+            <property name="use_stock">True</property>
+            <property name="yalign">1</property>
+            <signal name="clicked" handler="on_quit_button_clicked" swapped="no"/>
+          </object>
+          <packing>
+            <property name="expand">False</property>
+            <property name="fill">False</property>
+            <property name="position">2</property>
+          </packing>
+        </child>
+      </object>
+    </child>
+  </object>
+</interface>

@@ -10,15 +10,14 @@ if os.name == 'posix':
     Home = os.environ['HOME']
 elif os.name == 'nt':
     Home = os.environ['HOMEPATH']
-xcfDir = os.path.join(Home, "Projects/IMAGES/dvia_images")
-pngDir = os.path.join(Home, "Projects/IMAGES/dvia_images")
+xcfDir = os.path.join(Home, "Projects/IMAGES/dvia")
+pngDir = os.path.join(Home, "Projects/IMAGES/dvia")
 #
 
-def batchSaveXcfToPng(srcPath, tgtPath):
-    """Registered function batchSaveXcfToPng, Converts all of the
-    Xcfs in the source directory into PNG files in a target 
-    directory.  Requires two arguments, the paths to the source and
-    target directories.  DOES NOT require an image to be open.
+def saveXcfToPng(srcPath, tgtPath):
+    """Registered function; Converts all of the Xcfs in the source directory
+    into PNG files in a target directory.  Requires two arguments, the paths
+    to the source and target directories.  DOES NOT require an image to be open.
     """
     # Find all of the files in the source and target directories
     allFileList = os.listdir(srcPath)
@@ -49,20 +48,20 @@ def batchSaveXcfToPng(srcPath, tgtPath):
 ############################################################################
 #
 register (
-    "python_fu_batchSaveXcfToPng",         # Name registered in Procedure Browser
-    "XCF to PNG", # Widget title
-    "Convert XCF to PNG", # 
+    "saveXcfToPng",           # Name registered in Procedure Browser
+    "XCF to PNG",             # Widget title
+    "Convert XCF to PNG",     #
     "Kiran Maheriya",         # Author
     "Kiran Maheriya",         # Copyright Holder
     "March 2016",             # Date
-    "Convert XCF to PNG (Directory)", # Menu Entry
+    "5. Convert XCF to PNG (Directory)", # Menu Entry
     "",     # Image Type
     [
     ( PF_DIRNAME, "srcPath", "XCF Images (source) Directory:", xcfDir ),
     ( PF_DIRNAME, "tgtPath", "PNG Images (target) Directory:", pngDir ),
     ],
     [],
-    batchSaveXcfToPng,   # Matches to name of function being defined
+    saveXcfToPng,   # Matches to name of function being defined
     menu = "<Image>/DVIA"  # Menu Location
     )   # End register
 
