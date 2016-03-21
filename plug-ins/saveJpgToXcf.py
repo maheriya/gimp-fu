@@ -92,15 +92,15 @@ def saveJpgToXcf(srcPath, tgtPath):
     label = srcPath.split(os.path.sep)[-1:][0]
     #msgBox("d: {}\nLabel: {}".format(srcPath, label), gtk.MESSAGE_INFO, 1)
 
-    lbls = {'negative' : False, 'stair' : False, 'curb' : False, 'doorframe': False, 'badfloor': False }
-    lyrs = {'negative' : False, 'stair' : False, 'curb' : False, 'doorframe': False, 'badfloor': False }
+    lbls = {'negative' : False, 'stair' : False, 'curb' : False, 'doorframe': False, 'badfloor': False, 'drop': False }
+    lyrs = {'negative' : False, 'stair' : False, 'curb' : False, 'doorframe': False, 'badfloor': False, 'drop': False }
     ldata = {'labels': lbls, 'layers': lyrs}
 
     # Write label parasite
     lbl = None
     if not label.startswith('multi'):
         ## Not a multiclass image
-        lbl = label.split('_')[-1:][0]
+        lbl = '_'.join(label.split('_')[1:])
         lbls[lbl] = True
 
     imgid = 0
@@ -111,7 +111,6 @@ def saveJpgToXcf(srcPath, tgtPath):
             tgtFileList.append("{l}_{n:0>5}.xcf".format(l=label, n=imgid))
             imgid += 1
 
-    #msgBox(str(tgtFileList), gtk.MESSAGE_INFO, 1)
     # Dictionary - source & target file names
     tgtFileDict = dict(zip(srcFileList, tgtFileList))
     # Loop on jpegs, open each & save as xcf
@@ -132,10 +131,6 @@ def saveJpgToXcf(srcPath, tgtPath):
         pdb.gimp_image_reorder_item(img, base, grp, -1) # Move base layer into 'grp' group
 
         processImage(img)
-        if (lbl) and (lbl is not 'negative'): ## Add a layer 
-            lyr = pdb.gimp_layer_new(img, img.width, img.height, GRAYA_IMAGE, 'stair', 50, OVERLAY_MODE)
-            pdb.gimp_image_insert_layer(img, lyr, grp, -1)
-            lyrs[lbl] = True
 
         img.attach_new_parasite('ldata', 5, pickle.dumps(ldata))
         drw = img.active_drawable
@@ -149,12 +144,12 @@ def saveJpgToXcf(srcPath, tgtPath):
 #
 register (
     "saveJpgToXcf",           # Name registered in Procedure Browser
-    "Convert jpg/png files to xcf", # Widget title
-    "Convert jpg/png files to xcf", # 
+    "Convert JPG/PNG files to XCF", # Widget title
+    "Convert JPG/PNG files to XCF", # 
     "Kiran Maheriya",         # Author
     "Kiran Maheriya",         # Copyright Holder
     "March 2016",             # Date
-    "1. Convert JPG/PNG to XCF (Directory)", # Menu Entry
+    "1. Convert JPG/PNG to XCF", # Menu Entry
     "",     # Image Type - No Image Loaded
     [
     ( PF_DIRNAME, "srcPath", "JPG Originals (source) Directory:", jpegDir ),
@@ -162,7 +157,7 @@ register (
     ],
     [],
     saveJpgToXcf,      # Matches to name of function being defined
-    menu = "<Image>/DVIA"   # Menu Location
+    menu = "<Image>/DVIA/DirectoryLevelOps"   # Menu Location
     )   # End register
 #
 main() 

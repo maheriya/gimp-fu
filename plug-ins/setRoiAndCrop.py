@@ -65,7 +65,7 @@ def processImage(img):
     else:
         nw   = roi_w
         nh   = roi_w
-    msgBox("Crop stats: X:{x}, Y:{y}, W:{w}, H:{h}".format(x=roi_x, y=roi_y, w=nw, h=nh), gtk.MESSAGE_INFO, 0)
+    #msgBox("Crop stats: X:{x}, Y:{y}, W:{w}, H:{h}".format(x=roi_x, y=roi_y, w=nw, h=nh), gtk.MESSAGE_INFO, 0)
     pdb.gimp_image_resize(img, nw, nh, -roi_x, -roi_y)
 
     # Now scale the image down to have max of 480 dimension (images smaller than this are left untouched)
@@ -93,12 +93,19 @@ def setRoiAndCrop():
         msgBox("Make a selection for the BB and call me again.", gtk.MESSAGE_INFO, 0)
         return
 
+    ## Check is the image is XCF. If not, quit with a warning.
+    fname = pdb.gimp_image_get_filename(img)
+    ext = fname.split('.')[-1].lower()
+    if (ext != "xcf"):
+        msgBox("You should use this only with XCF images. Make sure to run JPEG/PNG->XCF script on a directory to create directory with XCF images.", gtk.MESSAGE_ERROR, 1)
+        return
     processImage(img)
-    drw = img.active_drawable
-    tgtFile = pdb.gimp_image_get_filename(img)
-    pdb.gimp_xcf_save(0, img, drw, tgtFile, tgtFile)
-    pdb.gimp_image_clean_all(img)
-    pdb.gimp_display_delete(gimp.default_display())
+    #drw = img.active_drawable
+    #tgtFile = pdb.gimp_image_get_filename(img)
+    #pdb.gimp_xcf_save(0, img, drw, tgtFile, tgtFile)
+    #pdb.gimp_image_clean_all(img)
+    #pdb.gimp_display_delete(gimp.default_display())
+
 #
 ############################################################################
 #
@@ -109,7 +116,7 @@ register (
     "Kiran Maheriya",         # Author
     "Kiran Maheriya",         # Copyright Holder
     "March 2016",             # Date
-    "3. Set RoI",         # Menu Entry
+    "a. Set RoI",         # Menu Entry
     "",     # Image Type - No Image Loaded
     [
     ],

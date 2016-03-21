@@ -58,7 +58,7 @@ register (
     "Kiran Maheriya",         # Author
     "Kiran Maheriya",         # Copyright Holder
     "March 2016",             # Date
-    "4. Add Labels",          # Menu Entry
+    "b. Add Labels",          # Menu Entry
     "",     # Image Type - No Image Loaded
     [
     ],

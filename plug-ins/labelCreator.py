@@ -35,8 +35,8 @@ class labelCreator:
             self.labels = self.ldata['labels']
             self.layers = self.ldata['layers']
         else:
-            self.labels = {'negative' : False, 'stair' : False, 'curb' : False, 'doorframe': False, 'badfloor': False }
-            self.layers = {'negative' : False, 'stair' : False, 'curb' : False, 'doorframe': False, 'badfloor': False }
+            self.labels = {'negative' : False, 'stair' : False, 'curb' : False, 'doorframe': False, 'badfloor': False, 'drop': False }
+            self.layers = {'negative' : False, 'stair' : False, 'curb' : False, 'doorframe': False, 'badfloor': False, 'drop': False }
             self.ldata = {'labels': self.labels, 'layers': self.layers}
 
         self.nps = {'negative' : (), 'stair' : (), 'curb' : (), 'doorframe': (), 'badfloor': () }
@@ -197,7 +197,8 @@ class labelCreator:
         y = bb[3]
         self.nps[self.lbl] = (x, y)
         gimp.set_foreground('#ffffff')
-        pdb.gimp_image_select_rectangle(self.img, CHANNEL_OP_REPLACE, x-5, y-10, 10, 10)
+        #pdb.gimp_image_select_rectangle(self.img, CHANNEL_OP_REPLACE, x-5, y-10, 10, 10)
+        pdb.gimp_image_select_ellipse  (self.img, CHANNEL_OP_REPLACE, x-5, y-10, 10, 10)
         pdb.gimp_edit_bucket_fill(self.img.active_drawable, FG_BUCKET_FILL, NORMAL_MODE, 100, 0, FALSE, 0, 0)
 
         pdb.gimp_selection_none(self.img)
