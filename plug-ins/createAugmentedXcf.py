@@ -116,7 +116,7 @@ class ImageAugmentor:
         '''Add Noise
         '''
 
-        for noiseAmount in (0.05, 0.10, 0.15, 0.20):
+        for noiseAmount in (0.10, 0.18, 0.26, 0.34):
             nimg = pdb.gimp_image_duplicate(self.img)
             pdb.gimp_image_set_active_layer(nimg, pdb.gimp_image_get_layer_by_name(nimg, 'base'))
             try:
@@ -135,49 +135,49 @@ class ImageAugmentor:
             # Gaussian blur. Similar to soft focus
             nimg = pdb.gimp_image_duplicate(self.img)
             pdb.gimp_image_set_active_layer(nimg, pdb.gimp_image_get_layer_by_name(nimg, 'base'))
-            pdb.plug_in_gauss_iir(nimg, nimg.active_drawable, 4, 2, 2)
+            pdb.plug_in_gauss_iir(nimg, nimg.active_drawable, 7, 2, 2)
             self.saveImage(nimg, '01_blur1_gaussblur1')
 
             # Gaussian blur. More
             nimg = pdb.gimp_image_duplicate(self.img)
             pdb.gimp_image_set_active_layer(nimg, pdb.gimp_image_get_layer_by_name(nimg, 'base'))
-            pdb.plug_in_gauss_iir(nimg, nimg.active_drawable, 8, 4, 4)
+            pdb.plug_in_gauss_iir(nimg, nimg.active_drawable, 12, 3, 4)
             self.saveImage(nimg, '01_blur2_gaussblur2')
 
             # Linear motion blur, vertical shake
             nimg = pdb.gimp_image_duplicate(self.img)
             pdb.gimp_image_set_active_layer(nimg, pdb.gimp_image_get_layer_by_name(nimg, 'base'))
-            pdb.plug_in_mblur(nimg, nimg.active_drawable, 0, 8, 100, 0, 0)
+            pdb.plug_in_mblur(nimg, nimg.active_drawable, 0, 10, 100, 0, 0)
             self.saveImage(nimg, '01_blur3_mblur_ver')
 
             # Linear motion blur, horizontal shake
             nimg = pdb.gimp_image_duplicate(self.img)
             pdb.gimp_image_set_active_layer(nimg, pdb.gimp_image_get_layer_by_name(nimg, 'base'))
-            pdb.plug_in_mblur(nimg, nimg.active_drawable, 0, 8, 12, 0, 0)
+            pdb.plug_in_mblur(nimg, nimg.active_drawable, 0, 10, 12, 0, 0)
             self.saveImage(nimg, '01_blur4_mblur_hor')
 
             # Radial motion blur, towards center
             nimg = pdb.gimp_image_duplicate(self.img)
             pdb.gimp_image_set_active_layer(nimg, pdb.gimp_image_get_layer_by_name(nimg, 'base'))
-            pdb.plug_in_mblur(nimg, nimg.active_drawable, 1, 0.1, 2, 100, 100)        
+            pdb.plug_in_mblur(nimg, nimg.active_drawable, 1, 0.15, 2.1, 100, 100)        
             self.saveImage(nimg, '01_blur5_mblur_rcnt')
 
             # Radial motion blur, completely off-center
             nimg = pdb.gimp_image_duplicate(self.img)
             pdb.gimp_image_set_active_layer(nimg, pdb.gimp_image_get_layer_by_name(nimg, 'base'))
-            pdb.plug_in_mblur(nimg, nimg.active_drawable, 1, 0.1, 1.3, -200, -200)
+            pdb.plug_in_mblur(nimg, nimg.active_drawable, 1, 0.15, 1.5, -200, -200)
             self.saveImage(nimg, '01_blur6_mblur_rshk1')
 
             # Radial motion blur, completely off-center, larger shake
             nimg = pdb.gimp_image_duplicate(self.img)
             pdb.gimp_image_set_active_layer(nimg, pdb.gimp_image_get_layer_by_name(nimg, 'base'))
-            pdb.plug_in_mblur(nimg, nimg.active_drawable, 1, 0.2, 1.35, -150, 400)
+            pdb.plug_in_mblur(nimg, nimg.active_drawable, 1, 0.2, 1.4, -150, 400)
             self.saveImage(nimg, '01_blur7_mblur_rshk2')
 
             # Radial motion blur, completely off-center, even larger shake, different direction
             nimg = pdb.gimp_image_duplicate(self.img)
             pdb.gimp_image_set_active_layer(nimg, pdb.gimp_image_get_layer_by_name(nimg, 'base'))
-            pdb.plug_in_mblur(nimg, nimg.active_drawable, 1, 0.15, 1.3, 800, -800)
+            pdb.plug_in_mblur(nimg, nimg.active_drawable, 1, 0.25, 1.3, 800, -800)
             self.saveImage(nimg, '01_blur8_mblur_rshk3')
         except:
             msgBox('augBlur failed: {}'.format(sys.exc_info()[0]), gtk.MESSAGE_ERROR)
@@ -190,9 +190,9 @@ class ImageAugmentor:
         '''Sharpen the image
         '''
         idx = 1
-        for (r, amt) in (( 7, 0.2),  # Low
-                         ( 3, 0.5),  # Small radius medium
-                         ( 8, 0.6),  # Wider radius medium (affects contrast)
+        for (r, amt) in (( 8, 0.3),  # Low
+                         ( 5, 0.6),  # Small radius medium
+                         (10, 0.8),  # Wider radius medium (affects contrast)
                          (60, 1.0)): # High contrast
             nimg = pdb.gimp_image_duplicate(self.img)
             base = pdb.gimp_image_get_layer_by_name(nimg, 'base')
