@@ -327,12 +327,12 @@ class ImageAugmentor:
         # Format: positive is inside the image (shrink), negative is outside the image (expand);
         # All values are to be added of substracted from img width and height
         idx = 1
-        for ((x0,y0),(x1,y1), (x2,y2), (x3,y3)) in (((10,0),    (10,0),    (0,0),   (0,0)), # move top-right corner 10pix to the right; top-left corner 10px to left; bottom-right and bottom-left are left untouched 
-                                                    ((20,0),    (20,0),    (0,0),   (0,0)),
-                                                    ((10,0),    (10,0),    (-10,0), (-10,0)),
-                                                    ((15,0),    (15,0),    (-15,0), (-15,0)),
-                                                    ((10,10),   (-10,-10), (0,0),   (0,0)), 
-                                                    ((-10,-10), (10,10),   (-10,0), (-10,0))):
+        for ((x0,y0),(x1,y1), (x2,y2), (x3,y3)) in (((12,0),    (12,0),    (0,0),   (0,0)), # move top-right corner 10pix to the right; top-left corner 10px to left; bottom-right and bottom-left are left untouched 
+                                                    ((22,0),    (22,0),    (0,0),   (0,0)),
+                                                    ((12,0),    (12,0),    (-10,0), (-10,0)),
+                                                    ((17,0),    (17,0),    (-17,0), (-17,0)),
+                                                    ((12,12),   (-12,-12), (0,0),   (0,0)), 
+                                                    ((-12,-12), (12,12),   (-12,0), (-12,0))):
             nimg = pdb.gimp_image_duplicate(self.img)
             grp  = pdb.gimp_image_get_layer_by_name(nimg, 'group')
             pdb.gimp_selection_all(nimg)
