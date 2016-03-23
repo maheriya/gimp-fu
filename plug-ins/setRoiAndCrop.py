@@ -14,13 +14,9 @@ import pygtk
 pygtk.require('2.0')
 import gtk
 
+IMG_SIZE = 300
 
-if os.name == 'posix':
-    Home = os.environ['HOME']
-elif os.name == 'nt':
-    Home = os.environ['HOMEPATH']
-
-srcDir = os.path.join(Home, "Projects/IMAGES/dvia")
+srcDir = os.path.join(os.environ['HOME'], "Projects/IMAGES/dvia")
 
 def msgBox(message, type, modal):
     if modal == 0:
@@ -69,9 +65,9 @@ def processImage(img):
     pdb.gimp_image_resize(img, nw, nh, -roi_x, -roi_y)
 
     # Now scale the image down to have max of 480 dimension (images smaller than this are left untouched)
-    if nw > 480:
-        nw = 480
-        nh = 480
+    if nw > IMG_SIZE:
+        nw = IMG_SIZE
+        nh = IMG_SIZE
     pdb.gimp_image_scale(img, nw, nh)
     pdb.gimp_selection_none(img)
     try:
@@ -90,7 +86,7 @@ def setRoiAndCrop():
 
     bb = pdb.gimp_selection_bounds(img)   
     if not bb[0]:
-        msgBox("Make a selection for the BB and call me again.", gtk.MESSAGE_INFO, 0)
+        msgBox("Make a SQUARE selection for the RoI and call me again.", gtk.MESSAGE_INFO, 0)
         return
 
     ## Check is the image is XCF. If not, quit with a warning.
