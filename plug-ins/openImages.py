@@ -19,6 +19,11 @@ import gtk
 
 srcDir = os.path.join(os.environ['HOME'], "Projects/IMAGES/dvia")
 
+scriptpath = os.path.dirname(os.path.realpath( __file__ ))
+
+sys.stderr = open(os.path.join(os.environ['HOME'], '/tmp/dviastderr.txt'), 'w')
+sys.stdout = open(os.path.join(os.environ['HOME'], '/tmp/dviastdout.txt'), 'w')
+
 SIG_OK     = -5
 SIG_CANCEL = -6
 SIG_YES    = -8 
@@ -38,6 +43,68 @@ def msgBox(msg,btype=gtk.MESSAGE_INFO):
     resp = msgBox.run()
     msgBox.destroy()
 
+class DialogBox:
+    def __init__(self, srcdir, filelist):
+        self.srcdir    = srcdir
+        self.filelist  = filelist
+        self.img       = None
+        self.disp      = None
+
+        self.gladefile = os.path.join(scriptpath, "openImages.glade") 
+        self.wtree = gtk.Builder()
+        self.wtree.add_from_file(self.gladefile)
+        funcmap = {
+                "on_next_button_clicked"     : self.next,
+                "on_quit_button_clicked"     : self.quit,
+                "on_mainWindow_destroy"      : self.quit,
+        }
+        self.wtree.connect_signals(funcmap)
+
+        ## Get all the handles
+        self.win = self.wtree.get_object("dialogWindow")
+        self.win.show_all()
+        
+        self.srcfiles = []
+        for fname in filelist:
+            if not fname.lower().endswith('.xcf'):
+                continue # skip non-xcf files
+            self.srcfiles.append(fname)
+        # Find all of the xcf files in the list
+        if len(self.srcfiles) == 0:
+            msgBox("Source directory didn't contain any XCF images.", gtk.MESSAGE_ERROR)
+            return
+
+        # Open the first image from the list and then let self.next take over based on user input
+        self.next(None)
+        gtk.main()
+
+
+    def quit(self, widget):
+        self.saveImage()
+        try:self.win.destroy()
+        except: pass
+        gtk.main_quit()
+
+    def next(self, widget):
+        if len(self.srcfiles)==0:
+            msgBox("No more files list to edit. We are done!", gtk.MESSAGE_INFO)
+            self.quit()
+        if len(gimp.image_list()) > 0 and self.img is not None:
+            self.saveImage()
+
+        srcfile = os.path.join(self.srcdir, self.srcfiles[0])
+        self.srcfiles = self.srcfiles[1:] # pop_front() 
+        print 'Opening ' + srcfile
+        self.img = pdb.gimp_file_load(srcfile, srcfile)
+        self.disp = pdb.gimp_display_new(self.img)
+
+    def saveImage(self):
+        if len(gimp.image_list()) == 0 or self.img is None:
+            return
+        pdb.gimp_xcf_save(0, self.img, self.img.active_drawable, self.img.filename, self.img.filename)
+        pdb.gimp_image_clean_all(self.img)
+        pdb.gimp_display_delete(self.disp)
+
 
 def openXcfImages(srcPath):
     """Registered function openImages, opens all XCF images from srcPath
@@ -47,39 +114,9 @@ def openXcfImages(srcPath):
     pdb.gimp_displays_flush()
     filelist = os.listdir(srcPath)
     filelist.sort()
-    srcfiles = []
 
-    for fname in filelist:
-        if not fname.lower().endswith('.xcf'):
-            continue # skip non-xcf files
-        srcfiles.append(fname)
-        srcfile = os.path.join(srcPath, fname)
-        img = pdb.gimp_file_load(srcfile, srcfile)
-        disp = pdb.gimp_display_new(img)
-        sleep(4)
-        resp = questionBox('''
-Are you ready to work on NEXT IMAGE?
+    dbox = DialogBox(srcPath, filelist)
 
-Image will always be saved. Undo changes if you don't want to save them.
-
-Click on 'No' to quit. 
-Click on 'Yes' to open next image.''')
-        if len(gimp.image_list()) > 0:
-            saveImage(img, disp)
-        if resp == SIG_NO: # User clicked 'No'
-            break
-
-    # Find all of the xcf files in the list
-    if len(srcfiles) == 0:
-        msgBox("Source directory didn't contain any XCF images.", gtk.MESSAGE_ERROR)
-    else:
-        msgBox("Done with all images.", gtk.MESSAGE_INFO)
-
-def saveImage(img, disp):
-    pdb.gimp_xcf_save(0, img, img.active_drawable, img.filename, img.filename)
-    pdb.gimp_image_clean_all(img)
-    #pdb.gimp_display_delete(gimp.default_display())
-    pdb.gimp_display_delete(disp)
     
 #
 ############################################################################
