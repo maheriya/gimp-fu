@@ -161,7 +161,7 @@ def saveXcfToPng(srcdir, tgtdir, NP, MLC):
 
     extractor = ImageExtractor(srcdir, tgtdir, filelist, NP, MLC)
     extractor.run()
-    msgBox("The PNG files and {} are successfully created in {}".format(LABELFILE, tgtdir), gtk.MESSAGE_INFO)
+    #msgBox("The PNG files and {} are successfully created in {}".format(LABELFILE, tgtdir), gtk.MESSAGE_INFO)
 
 
 #

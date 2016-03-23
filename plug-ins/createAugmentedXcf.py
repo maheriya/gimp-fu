@@ -69,8 +69,6 @@ class ImageAugmentor:
         self.img = pdb.gimp_file_load(srcfilepath, srcfilepath)
         self.base = pdb.gimp_image_get_layer_by_name(self.img, 'base')
         self.grp = pdb.gimp_image_get_layer_by_name(self.img, 'group')
-        # local, flattened copy of the image
-        #self.flatimg = self.getImageFlatCopy(self.img)
 
         pdb.gimp_context_set_background('#000000')
         pdb.gimp_context_set_foreground('#ffffff')
@@ -82,6 +80,13 @@ class ImageAugmentor:
         self.ldata = pickle.loads(para.data)
         self.labels = self.ldata['labels']
         self.layers = self.ldata['layers']
+        if self.labels['negative']:
+            self.nps = {'negative' : (self.img.width/2, self.img.height/2),  'stair' : (), 'curb' : (), 'doorframe': (), 'badfloor': () }
+            self.bbs = {'negative' : (0,0, self.img.width, self.img.height), 'stair' : (), 'curb' : (), 'doorframe': (), 'badfloor': () }
+            self.ldata['NP'] = self.nps
+            self.ldata['BB'] = self.bbs
+            self.img.attach_new_parasite('ldata', 5, pickle.dumps(self.ldata)) # Update the image parasites for later use 
+
         self.nps = self.ldata['NP']
         self.bbs = self.ldata['BB']
 
@@ -108,7 +113,7 @@ class ImageAugmentor:
             return False
 
         # Save base image
-        self.saveImage(self.img, '00base', updateParasites=False)
+        self.saveImage(self.img, '00_BASE_IMAGE', updateParasites=False)
         return True
 
     ## Local functions. Not to be called directly
@@ -177,7 +182,7 @@ class ImageAugmentor:
             # Radial motion blur, completely off-center, even larger shake, different direction
             nimg = pdb.gimp_image_duplicate(self.img)
             pdb.gimp_image_set_active_layer(nimg, pdb.gimp_image_get_layer_by_name(nimg, 'base'))
-            pdb.plug_in_mblur(nimg, nimg.active_drawable, 1, 0.25, 1.3, 800, -800)
+            pdb.plug_in_mblur(nimg, nimg.active_drawable, 1, 0.2, 1.27, 800, -800)
             self.saveImage(nimg, '01_blur8_mblur_rshk3')
         except:
             msgBox('augBlur failed: {}'.format(sys.exc_info()[0]), gtk.MESSAGE_ERROR)
@@ -215,7 +220,9 @@ class ImageAugmentor:
         '''Filter with erosion filter (shrinks white -- or groes white area)
         '''
         nimg = []
-        for idx in (0, 1):
+        rnge = (0, ) # Note: doing only one iteration. Since the size change to 300x300, two iterations are too much
+        #rnge = (0, 1)
+        for idx in rnge:
             nimg.append(pdb.gimp_image_duplicate(self.img))
             base = pdb.gimp_image_get_layer_by_name(nimg[idx], 'base')
             for rep in range(0, idx+1):
@@ -226,8 +233,6 @@ class ImageAugmentor:
                     msgBox('augErode failed: {}'.format(sys.exc_info()[0]), gtk.MESSAGE_ERROR)
                     raise
                     return False
-
-        for idx in (0, 1):
             self.saveImage(nimg[idx], '03_erode{}'.format(idx)) # Save image and delete from memory
 
         return True
@@ -236,7 +241,9 @@ class ImageAugmentor:
         '''Filter with dilate filter
         '''
         nimg = []
-        for idx in (0, 1):
+        rnge = (0, ) # Note: doing only one iteration. Since the size change to 300x300, two iterations are too much
+        #rnge = (0, 1)
+        for idx in rnge:
             nimg.append(pdb.gimp_image_duplicate(self.img))
             base = pdb.gimp_image_get_layer_by_name(nimg[idx], 'base')
             for rep in range(0, idx+1):
@@ -247,8 +254,6 @@ class ImageAugmentor:
                     msgBox('augDilate failed: {}'.format(sys.exc_info()[0]), gtk.MESSAGE_ERROR)
                     raise
                     return False
-
-        for idx in (0, 1):
             self.saveImage(nimg[idx], '04_dilate{}'.format(idx)) # Save image and delete from memory
 
         return True
@@ -280,7 +285,7 @@ class ImageAugmentor:
         enough compared to the RoI mask. This function will make the background color black.
         '''
 
-        idx = 0
+        idx  = 0
         snpx = 0
         snpy = 0
         for lbl in self.nps:
@@ -289,10 +294,10 @@ class ImageAugmentor:
                 (npx, npy) = self.nps[lbl]
                 snpx += npx
                 snpy += npy
-
-        # Find average of npx and npy. This gives us our center of rotation
         npx = snpx/idx
         npy = snpy/idx
+
+        # Find average of npx and npy. This gives us our center of rotation
         w = self.img.width
         if (w/3 - npx) > 0:     # On the left 1/3
             # More CW rotation than CCW
@@ -376,11 +381,11 @@ class ImageAugmentor:
         for lbl in self.nps:
             if len(self.nps[lbl]) > 0:
                 nparray.append(self.nps[lbl])
-                 
-        # Determine x and y offsets based on min and max of the NPs.
-        # This is not full-proof. Just an attempt to minimize the problem of pushing the NP out of the image
         (xmax,ymax) = max(nparray)
         (xmin,ymin) = min(nparray)
+
+        # Determine x and y offsets based on min and max of the NPs.
+        # This is not full-proof. Just an attempt to minimize the problem of pushing the NP out of the image
         w = self.grp.width
         h = self.grp.height
         # x and y offsets are with respect to the top-right corner of the image. neg means move left, pos means move right
@@ -439,8 +444,8 @@ class ImageAugmentor:
                 # Get new selection bounding box 
                 bbox = pdb.gimp_selection_bounds(img)
                 if bbox[0] == 0:
-                    # Empty selection -- can happen if the NP or BB moved out of the image range due to transformation
-                    print 'Bounding box for label {l} {t} for img {i} not found. Skipping the {t} update silently'.format(l=lbl, t=ltype.upper(), i=str(img))
+                    # Empty selection -- can happen if the NP or BB moved out of the image range due to transformation. Also for negative image class
+                    #print 'Bounding box for label {l} {t} for img {i} not found. Skipping the {t} update silently'.format(l=lbl, t=ltype.upper(), i=str(img))
                     continue # skip further operation
                 if ltype == 'bb':
                     ldata['BB'][lbl] = bbox[1:]
