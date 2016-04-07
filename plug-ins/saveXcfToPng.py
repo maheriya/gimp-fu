@@ -28,8 +28,9 @@ xcfDir = os.path.join(os.environ['HOME'], "Projects/IMAGES/dvia")
 pngDir = os.path.join(os.environ['HOME'], "Projects/IMAGES/dvia")
 #
 # For GUI extra options. See description of saveXcfToPng for details
-saveNP  = False
-saveMLC = False
+saveNP     = False
+saveMLC    = False
+saveLabels = False
 
 def msgBox(msg, btype=gtk.MESSAGE_INFO):
     flag = gtk.DIALOG_MODAL|gtk.DIALOG_DESTROY_WITH_PARENT
@@ -103,7 +104,12 @@ class ImageExtractor:
             labelstr = '{} {}'.format(self.pngname, CLS_IDS[nplbl])
             if self.NP:
                 # Add NP x and y coordinates
-                labelstr += ' ' + ' '.join(map(lambda x:str(x), self.nps[nplbl]))
+                # Shiva : normalize x and y co-ordinate values
+                x, y = map(float, self.nps[nplbl])
+                x = float(x/self.img.height)
+                y = float(y/self.img.width)
+                labelstr += ' ' + ''.join(str(round(x, 3)))
+                labelstr += ' ' + ''.join(str(round(y, 3)))
         else: # Need to save multi-label class format and multiple NPs
             labelstr = self.pngname
             cls = MLC_LBLS
@@ -116,6 +122,7 @@ class ImageExtractor:
                         if len(self.nps[lbl]) == 0:
                             msgBox('For label {l} in image {i}, could not find NP'.format(i=self.basename, l=lbl), gtk.MESSAGE_ERROR)
                             return False
+                        # normalize the value here whenever self.nps happens
                         npstr += ' ' + ' '.join(map(lambda x:str(x), self.nps[lbl]))
             labelstr += ' ' + ' '.join(map(lambda x: str(x), cls))
             if self.NP:
@@ -181,6 +188,7 @@ register (
     ( PF_DIRNAME, "tgtdir", "Output PNG Images Directory:", pngDir ),
     ( PF_BOOL,    "NP",     "Save Nearest Point as a label?", saveNP),
     ( PF_BOOL,    "MLC",    "Save labels in Multi-Label Classification (MLC) format?", saveMLC)
+    #( PF_BOOL,    "Save Only Labels",    "Does not generate png, checks if the png is present.", saveLabels)
     ],
     [],
     saveXcfToPng,   # Matches to name of function being defined
