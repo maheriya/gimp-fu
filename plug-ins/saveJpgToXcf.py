@@ -92,8 +92,8 @@ def saveJpgToXcf(srcPath, tgtPath):
     label = srcPath.split(os.path.sep)[-1:][0]
     #msgBox("d: {}\nLabel: {}".format(srcPath, label), gtk.MESSAGE_INFO, 1)
 
-    lbls = {'negative' : False, 'stair' : False, 'curb' : False, 'doorframe': False, 'badfloor': False, 'drop': False }
-    lyrs = {'negative' : False, 'stair' : False, 'curb' : False, 'doorframe': False, 'badfloor': False, 'drop': False }
+    lbls = {'catchall' : False, 'stair' : False, 'curb' : False, 'doorframe': False, 'badfloor': False, 'drop': False }
+    lyrs = {'catchall' : False, 'stair' : False, 'curb' : False, 'doorframe': False, 'badfloor': False, 'drop': False }
     ldata = {'labels': lbls, 'layers': lyrs}
 
     # Write label parasite

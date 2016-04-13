@@ -9,7 +9,7 @@
     </columns>
     <data>
       <row>
-        <col id="0">Negative</col>
+        <col id="0">CatchAll</col>
       </row>
       <row>
         <col id="0">Stair</col>
@@ -158,7 +158,7 @@
                 <property name="visible">True</property>
                 <property name="can_focus">True</property>
                 <property name="receives_default">True</property>
-                <property name="tooltip_text" translatable="yes">Add selected classification label to the image. A new image layer will be created and addBB/addNP buttons will be enabled. For 'negative' class label, image layer is not created since BB or NP don't apply to negative class.</property>
+                <property name="tooltip_text" translatable="yes">Add selected classification label to the image. A new image layer will be created and addBB/addNP buttons will be enabled. For 'catchall' class label, image layer is not created since BB or NP don't apply to catchall class.</property>
                 <signal name="clicked" handler="on_add_label_clicked" swapped="no"/>
               </object>
               <packing>

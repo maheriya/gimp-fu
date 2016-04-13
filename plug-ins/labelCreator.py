@@ -35,12 +35,12 @@ class labelCreator:
             self.labels = self.ldata['labels']
             self.layers = self.ldata['layers']
         else:
-            self.labels = {'negative' : False, 'stair' : False, 'curb' : False, 'doorframe': False, 'badfloor': False, 'drop': False }
-            self.layers = {'negative' : False, 'stair' : False, 'curb' : False, 'doorframe': False, 'badfloor': False, 'drop': False }
+            self.labels = {'catchall' : False, 'stair' : False, 'curb' : False, 'doorframe': False, 'badfloor': False, 'drop': False }
+            self.layers = {'catchall' : False, 'stair' : False, 'curb' : False, 'doorframe': False, 'badfloor': False, 'drop': False }
             self.ldata = {'labels': self.labels, 'layers': self.layers}
 
-        self.nps = {'negative' : (), 'stair' : (), 'curb' : (), 'doorframe': (), 'badfloor': () }
-        self.bbs = {'negative' : (), 'stair' : (), 'curb' : (), 'doorframe': (), 'badfloor': () }
+        self.nps = {'catchall' : (), 'stair' : (), 'curb' : (), 'doorframe': (), 'badfloor': () }
+        self.bbs = {'catchall' : (), 'stair' : (), 'curb' : (), 'doorframe': (), 'badfloor': () }
         self.ldata['NP'] = self.nps
         self.ldata['BB'] = self.bbs
 
@@ -124,8 +124,8 @@ class labelCreator:
         if self.labels[self.lbl]: # label exists
             self.btn_addLabel.unmap()
             self.btn_delLabel.map()
-            if self.lbl != 'negative':
-                #self.msgBox('labelChanged: Label is not negative ({})'.format(self.lbl), gtk.MESSAGE_INFO)
+            if self.lbl != 'catchall':
+                #self.msgBox('labelChanged: Label is not catchall ({})'.format(self.lbl), gtk.MESSAGE_INFO)
                 self.enableBBNP = True
         else: # Label doesn't exist
             self.btn_addLabel.map()
@@ -139,11 +139,11 @@ class labelCreator:
 
         self.btn_addLabel.unmap()
         self.btn_delLabel.map()
-        if self.lbl == 'negative':
-            #self.msgBox('addLabel: Label is negative ({})'.format(self.lbl), gtk.MESSAGE_INFO)
+        if self.lbl == 'catchall':
+            #self.msgBox('addLabel: Label is catchall ({})'.format(self.lbl), gtk.MESSAGE_INFO)
             self.enableBBNP = False
         else:
-            #self.msgBox('addLabel: Label is not negative ({})'.format(self.lbl), gtk.MESSAGE_INFO)
+            #self.msgBox('addLabel: Label is not catchall ({})'.format(self.lbl), gtk.MESSAGE_INFO)
             self.enableBBNP = True
         self.showButtonsBBNP()
         self.saveParasite()
@@ -152,7 +152,7 @@ class labelCreator:
     def addBB(self, widget):
         '''Add a bounding polygon in the BB layer and a bounding box in the image parasite
         based on user selection.'''
-        if self.lbl == 'negative' or self.lbl is None:
+        if self.lbl == 'catchall' or self.lbl is None:
             self.msgBox('add BB should not be called for label "{}".'.format(self.lbl), gtk.MESSAGE_ERROR)
             return
         bb = pdb.gimp_selection_bounds(self.img)
@@ -179,7 +179,7 @@ class labelCreator:
         '''Add the nearest point based on user selection. A square is adeded in the image and NP is stored as
         a part of the ldata parasite in the image
         '''
-        if self.lbl == 'negative' or self.lbl is None:
+        if self.lbl == 'catchall' or self.lbl is None:
             self.msgBox('add NP should not be called for label "{}".'.format(self.lbl), gtk.MESSAGE_ERROR)
             return
         bb = pdb.gimp_selection_bounds(self.img)
