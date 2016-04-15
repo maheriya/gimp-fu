@@ -19,7 +19,7 @@ PNG_WIDTH   = 40
 PNG_HEIGHT  = 40
 CLS_IDS     = {'catchall' : 0, 'stair' : 1, 'curb' : 2, 'doorframe': 3, 'badfloor': 4, 'drop': 5 }
 MLC_LBLS    = [0, 0, 0, 0, 0, 0]
-LABELFILE   = 'labels.txt'
+LABELFILE   = 'labels'
 
 
 #############################################################################
@@ -44,14 +44,27 @@ into tgtdir. Apart from that, writes the labels data in labels file.
 '''
 class ImageExtractor:
 
-    def __init__(self, srcdir, tgtdir, filelist, NP, MLC):
-        self.srcdir   = srcdir
-        self.tgtdir   = tgtdir
-        self.filelist = filelist
-        self.NP       = NP
-        self.MLC      = MLC
+    def __init__(self, srcdir, tgtdir, filelist, NP, MLC, OnlyLabels):
+        self.srcdir     = srcdir
+        self.tgtdir     = tgtdir
+        self.filelist   = filelist
+        self.NP         = NP
+        self.MLC        = MLC
+        self.OnlyLabels = OnlyLabels
 
     def run(self):
+        if(self.NP):
+            if(self.MLC):
+                LABELFILE = 'labels_NP_MLC'
+            else:
+                LABELFILE = 'labels_NP'
+        else:
+            if(self.MLC):
+                LABELFILE = 'labels_MLC'
+            else:
+                LABELFILE = 'labels'
+        LABELFILE += '.txt'
+        print LABELFILE
         self.lfile  = open(os.path.join(self.tgtdir, LABELFILE), 'w')
         for srcfile in self.filelist:
             if not srcfile.lower().endswith('.xcf'):
@@ -128,7 +141,8 @@ class ImageExtractor:
             if self.NP:
                 labelstr += npstr
         self.lfile.write('{}\n'.format(labelstr))
-        self.saveImage()
+        if not self.OnlyLabels:
+            self.saveImage()
         return True
 
     def flattenImage(self):
@@ -152,7 +166,7 @@ class ImageExtractor:
 
 
 
-def saveXcfToPng(srcdir, tgtdir, NP, MLC):
+def saveXcfToPng(srcdir, tgtdir, NP, MLC, OnlyLabels):
     """Registered function; Converts all of the Xcfs in the source directory
     into PNG files in a target directory. Saves labels too.
     NP : If true, saves Nearest points; if false, NPs are not saved
@@ -166,7 +180,7 @@ def saveXcfToPng(srcdir, tgtdir, NP, MLC):
         msgBox("Source and target directories must be different ({})".format(srcdir), gtk.MESSAGE_ERROR)
         return
 
-    extractor = ImageExtractor(srcdir, tgtdir, filelist, NP, MLC)
+    extractor = ImageExtractor(srcdir, tgtdir, filelist, NP, MLC, OnlyLabels)
     extractor.run()
     #msgBox("The PNG files and {} are successfully created in {}".format(LABELFILE, tgtdir), gtk.MESSAGE_INFO)
 
@@ -187,8 +201,8 @@ register (
     ( PF_DIRNAME, "srcdir", "Input XCF Images Directory:", xcfDir ),
     ( PF_DIRNAME, "tgtdir", "Output PNG Images Directory:", pngDir ),
     ( PF_BOOL,    "NP",     "Save Nearest Point as a label?", saveNP),
-    ( PF_BOOL,    "MLC",    "Save labels in Multi-Label Classification (MLC) format?", saveMLC)
-    #( PF_BOOL,    "Save Only Labels",    "Does not generate png, checks if the png is present.", saveLabels)
+    ( PF_BOOL,    "MLC",    "Save labels in Multi-Label Classification (MLC) format?", saveMLC),
+    ( PF_BOOL,    "OnlyLabels",    "Save Only Labels? ", saveLabels)
     ],
     [],
     saveXcfToPng,   # Matches to name of function being defined
