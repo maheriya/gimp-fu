@@ -180,10 +180,12 @@ class ImageAugmentor:
             self.saveImage(nimg, '01_blur7_mblur_rshk2')
 
             # Radial motion blur, completely off-center, even larger shake, different direction
-            nimg = pdb.gimp_image_duplicate(self.img)
-            pdb.gimp_image_set_active_layer(nimg, pdb.gimp_image_get_layer_by_name(nimg, 'base'))
-            pdb.plug_in_mblur(nimg, nimg.active_drawable, 1, 0.2, 1.27, 800, -800)
-            self.saveImage(nimg, '01_blur8_mblur_rshk3')
+            # Shiva - commenting this out as this image type is not helpful,
+            # most of the info in the image goes away - Shiva
+            #nimg = pdb.gimp_image_duplicate(self.img)
+            #pdb.gimp_image_set_active_layer(nimg, pdb.gimp_image_get_layer_by_name(nimg, 'base'))
+            #pdb.plug_in_mblur(nimg, nimg.active_drawable, 1, 0.2, 1.27, 800, -800)
+            #self.saveImage(nimg, '01_blur8_mblur_rshk3')
         except:
             msgBox('augBlur failed: {}'.format(sys.exc_info()[0]), gtk.MESSAGE_ERROR)
             raise

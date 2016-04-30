@@ -15,8 +15,8 @@ import gtk
 
 
 # Constants used by the script
-PNG_WIDTH   = 40
-PNG_HEIGHT  = 40
+PNG_WIDTH   = 64
+PNG_HEIGHT  = 64
 CLS_IDS     = {'catchall' : 0, 'stair' : 1, 'curb' : 2, 'doorframe': 3, 'badfloor': 4, 'drop': 5 }
 MLC_LBLS    = [0, 0, 0, 0, 0, 0]
 LABELFILE   = 'labels'
