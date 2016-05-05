@@ -32,13 +32,13 @@ jpegDir = os.path.join(Home, "Projects/IMAGES/dvia")
 
 
 def processImage(img):
-# Commented out to try AlexNet/ImageNet
-#     ## Convert to grayscale and rotate for portrait orientation if required
-#     if pdb.gimp_image_base_type(img) != 1:  # Not grayscale
-#         try:
-#             pdb.gimp_image_convert_grayscale(img)
-#         except:
-#             pass
+
+    ## Convert to RGB if required
+    if pdb.gimp_image_base_type(img) != 0:  # Not RGB
+        try:
+            pdb.gimp_image_convert_rgb(img)
+        except:
+            pass
 
     pdb.gimp_image_resize_to_layers(img)
 
