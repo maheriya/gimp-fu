@@ -243,7 +243,7 @@ class labelCreator:
             pdb.gimp_image_remove_layer(self.img, lyr)
             lyr = None
         if not lyr: # Layer doesn't exist. Add it.
-            lyr = pdb.gimp_layer_new(self.img, self.img.width, self.img.height, GRAYA_IMAGE, lname, 100, lmode)
+            lyr = pdb.gimp_layer_new(self.img, self.img.width, self.img.height, RGBA_IMAGE, lname, 100, lmode)
             pdb.gimp_image_insert_layer(self.img, lyr, self.grp, -1)
 
         self.layers[self.lbl] = True
