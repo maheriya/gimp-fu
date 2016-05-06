@@ -140,43 +140,43 @@ class ImageAugmentor:
             # Gaussian blur. Similar to soft focus
             nimg = pdb.gimp_image_duplicate(self.img)
             pdb.gimp_image_set_active_layer(nimg, pdb.gimp_image_get_layer_by_name(nimg, 'base'))
-            pdb.plug_in_gauss_iir(nimg, nimg.active_drawable, 7, 2, 2)
+            pdb.plug_in_gauss_iir(nimg, nimg.active_drawable, 3, 1, 2)
             self.saveImage(nimg, '01_blur1_gaussblur1')
 
             # Gaussian blur. More
             nimg = pdb.gimp_image_duplicate(self.img)
             pdb.gimp_image_set_active_layer(nimg, pdb.gimp_image_get_layer_by_name(nimg, 'base'))
-            pdb.plug_in_gauss_iir(nimg, nimg.active_drawable, 12, 3, 4)
+            pdb.plug_in_gauss_iir(nimg, nimg.active_drawable, 4, 2, 2)
             self.saveImage(nimg, '01_blur2_gaussblur2')
 
             # Linear motion blur, vertical shake
             nimg = pdb.gimp_image_duplicate(self.img)
             pdb.gimp_image_set_active_layer(nimg, pdb.gimp_image_get_layer_by_name(nimg, 'base'))
-            pdb.plug_in_mblur(nimg, nimg.active_drawable, 0, 10, 100, 0, 0)
+            pdb.plug_in_mblur(nimg, nimg.active_drawable, 0, 6, 100, 0, 0)
             self.saveImage(nimg, '01_blur3_mblur_ver')
 
             # Linear motion blur, horizontal shake
             nimg = pdb.gimp_image_duplicate(self.img)
             pdb.gimp_image_set_active_layer(nimg, pdb.gimp_image_get_layer_by_name(nimg, 'base'))
-            pdb.plug_in_mblur(nimg, nimg.active_drawable, 0, 10, 12, 0, 0)
+            pdb.plug_in_mblur(nimg, nimg.active_drawable, 0, 6, 12, 0, 0)
             self.saveImage(nimg, '01_blur4_mblur_hor')
 
             # Radial motion blur, towards center
             nimg = pdb.gimp_image_duplicate(self.img)
             pdb.gimp_image_set_active_layer(nimg, pdb.gimp_image_get_layer_by_name(nimg, 'base'))
-            pdb.plug_in_mblur(nimg, nimg.active_drawable, 1, 0.15, 2.1, 100, 100)        
+            pdb.plug_in_mblur(nimg, nimg.active_drawable, 1, 0.13, 1.9, 100, 100)        
             self.saveImage(nimg, '01_blur5_mblur_rcnt')
 
             # Radial motion blur, completely off-center
             nimg = pdb.gimp_image_duplicate(self.img)
             pdb.gimp_image_set_active_layer(nimg, pdb.gimp_image_get_layer_by_name(nimg, 'base'))
-            pdb.plug_in_mblur(nimg, nimg.active_drawable, 1, 0.15, 1.5, -200, -200)
+            pdb.plug_in_mblur(nimg, nimg.active_drawable, 1, 0.00, 1.00, -20, -10)
             self.saveImage(nimg, '01_blur6_mblur_rshk1')
 
             # Radial motion blur, completely off-center, larger shake
             nimg = pdb.gimp_image_duplicate(self.img)
             pdb.gimp_image_set_active_layer(nimg, pdb.gimp_image_get_layer_by_name(nimg, 'base'))
-            pdb.plug_in_mblur(nimg, nimg.active_drawable, 1, 0.2, 1.4, -150, 400)
+            pdb.plug_in_mblur(nimg, nimg.active_drawable, 1, 0.12, 1.1, -100, 300)
             self.saveImage(nimg, '01_blur7_mblur_rshk2')
 
             # Radial motion blur, completely off-center, even larger shake, different direction
