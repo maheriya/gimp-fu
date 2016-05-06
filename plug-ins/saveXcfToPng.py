@@ -15,17 +15,17 @@ import gtk
 
 
 # Constants used by the script
-PNG_WIDTH   = 64
-PNG_HEIGHT  = 64
-CLS_IDS     = {'catchall' : 0, 'stair' : 1, 'curb' : 2, 'doorframe': 3, 'badfloor': 4, 'drop': 5 }
-MLC_LBLS    = [0, 0, 0, 0, 0, 0]
+PNG_WIDTH   = 250
+PNG_HEIGHT  = 250
+CLS_IDS     = {'catchall' : 0, 'stair' : 1, 'curb' : 2, 'doorframe': 3} #, 'badfloor': 4, 'drop': 5 }
+CLASSES     = ['catchall', 'stair', 'curb', 'doorframe'] #, 'badfloor', 'drop']
+MLC_LBLS    = [0, 0, 0, 0] #, 0, 0]
 LABELFILE   = 'labels'
 
 
 #############################################################################
 # For GUI directory options.
 xcfDir = os.path.join(os.environ['HOME'], "Projects/IMAGES/dvia")
-pngDir = os.path.join(os.environ['HOME'], "Projects/IMAGES/dvia")
 #
 # For GUI extra options. See description of saveXcfToPng for details
 saveNP     = False
@@ -37,6 +37,11 @@ def msgBox(msg, btype=gtk.MESSAGE_INFO):
     msgBox = gtk.MessageDialog(None, flag, btype, gtk.BUTTONS_OK, msg)
     msgBox.run()
     msgBox.destroy()
+
+def mymsg(msg):
+    #print msg
+    pass
+
 
 '''
 This class takes an image filename as input, and stores a converted PNG image
@@ -67,6 +72,7 @@ class ImageExtractor:
         print LABELFILE
         self.lfile  = open(os.path.join(self.tgtdir, LABELFILE), 'w')
         for srcfile in self.filelist:
+            mymsg("Converting {} to PNG.".format(srcfile))
             if not srcfile.lower().endswith('.xcf'):
                 continue # skip non-xcf files
             if not self.extract(srcfile):
@@ -166,40 +172,70 @@ class ImageExtractor:
 
 
 
-def saveXcfToPng(srcdir, tgtdir, NP, MLC, OnlyLabels):
-    """Registered function; Converts all of the Xcfs in the source directory
-    into PNG files in a target directory. Saves labels too.
+def saveXcfToPng(srcdir, NP, MLC, OnlyLabels):
+    """
+    Registered function; Converts all of the Xcfs in the source 'augmented' 
+    directory into rescaled PNG files in a target directory. Saves labels too.
+    Source type dir name 'augmented' is enforced.
     NP : If true, saves Nearest points; if false, NPs are not saved
     MLC: IF true, saves all class labels; if false, only one class is saved.
     # In case of MLC=False, the class with NP closest to the bottom is selected automatically
     """
-    # Find all of the files in the source directory
-    filelist = os.listdir(srcdir)
-    filelist.sort()
-    if srcdir == tgtdir:
-        msgBox("Source and target directories must be different ({})".format(srcdir), gtk.MESSAGE_ERROR)
+    srcAugDir = os.path.realpath(srcdir)
+    aug       = srcdir.split('/')[-1]
+    tgtPngDir = os.path.join('/'.join(srcAugDir.split('/')[:-1]), 'png')
+
+    if aug != 'augmented':
+        msgBox("Source type dir ({}) is not named 'augmented'. As a part of the flow, this is a requirement. Aborting!".format(aug), gtk.MESSAGE_ERROR)
         return
 
-    extractor = ImageExtractor(srcdir, tgtdir, filelist, NP, MLC, OnlyLabels)
-    extractor.run()
-    #msgBox("The PNG files and {} are successfully created in {}".format(LABELFILE, tgtdir), gtk.MESSAGE_INFO)
+    if not os.path.exists(tgtPngDir):
+        os.mkdir(tgtPngDir)
+    labels = os.listdir(srcAugDir)
+    labels.sort()
+    for label in labels:
+        tgtdir    = os.path.join(tgtPngDir, label)
+        if os.path.exists(tgtdir):
+            # Make sure that directory is empty. Otherwise quit.
+            flist = os.listdir(tgtdir)
+            if len(flist) > 0:
+                msgBox("Target directory {} is not empty. Aborting.".format(tgtdir), gtk.MESSAGE_ERROR)
+                return
+        else:
+            os.mkdir(tgtdir)
 
+    # At this point everything is in order. Start the conversion...
+    msgBox("Images from following class directories in source 'augmented' dir will be converted to PNG: {}".format(labels), gtk.MESSAGE_INFO)
+
+    # Find all of the files in the source directory
+    for label in labels:
+        tgtdir    = os.path.join(tgtPngDir, label)
+        srcdir    = os.path.join(srcAugDir, label)
+        filelist  = os.listdir(srcdir)
+        filelist.sort()
+        if len(filelist) == 0:
+            continue
+        mymsg("Converting {} directory to PNG.".format(label))
+        extractor = ImageExtractor(srcdir, tgtdir, filelist, NP, MLC, OnlyLabels)
+        extractor.run()
+        mymsg("{} directory is converted to PNG.".format(label))
+
+    mymsg("The PNG files and {} are successfully created in {}".format(LABELFILE, tgtPngDir))
 
 #
 ############################################################################
 #
 register (
     "saveXcfToPng",           # Name registered in Procedure Browser
-    "Convert XCF images from source directory to PNG images in target directory. Includes extraction of labels.",             # Widget title
-    "Convert XCF images from source directory to PNG images in target directory. Includes extraction of labels.",
+    "Convert XCF images from source 'augmented' directory to output PNG images in target 'png' directory. Includes extraction of labels.",       # Widget title
+    "Convert XCF images from source 'augmented' directory to output PNG images in target 'png' directory. Includes extraction of labels.",
     "Kiran Maheriya",         # Author
     "Kiran Maheriya",         # Copyright Holder
     "March 2016",             # Date
     "4. Convert XCF to Final PNG for DB",  # Menu Entry
     "",     # Image Type
     [
-    ( PF_DIRNAME, "srcdir", "Input XCF Images Directory:", xcfDir ),
-    ( PF_DIRNAME, "tgtdir", "Output PNG Images Directory:", pngDir ),
+    ( PF_DIRNAME, "srcdir", "Input 'augmented' Directory:", xcfDir ),
     ( PF_BOOL,    "NP",     "Save Nearest Point as a label?", saveNP),
     ( PF_BOOL,    "MLC",    "Save labels in Multi-Label Classification (MLC) format?", saveMLC),
     ( PF_BOOL,    "OnlyLabels",    "Save Only Labels? ", saveLabels)
