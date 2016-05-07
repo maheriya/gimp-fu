@@ -32,6 +32,19 @@ saveNP     = False
 saveMLC    = False
 saveLabels = False
 
+SIG_OK     = -5
+SIG_CANCEL = -6
+SIG_YES    = -8 
+SIG_NO     = -9
+
+def questionBox(msg):
+    btype=gtk.MESSAGE_QUESTION
+    flag = gtk.DIALOG_DESTROY_WITH_PARENT
+    msgBox = gtk.MessageDialog(None, flag, btype, gtk.BUTTONS_YES_NO, msg)
+    resp = msgBox.run()
+    msgBox.destroy()
+    return resp
+
 def msgBox(msg, btype=gtk.MESSAGE_INFO):
     flag = gtk.DIALOG_MODAL|gtk.DIALOG_DESTROY_WITH_PARENT
     msgBox = gtk.MessageDialog(None, flag, btype, gtk.BUTTONS_OK, msg)
@@ -199,8 +212,13 @@ def saveXcfToPng(srcdir, NP, MLC, OnlyLabels):
             # Make sure that directory is empty. Otherwise quit.
             flist = os.listdir(tgtdir)
             if len(flist) > 0:
-                msgBox("Target directory {} is not empty. Aborting.".format(tgtdir), gtk.MESSAGE_ERROR)
-                return
+                resp = questionBox("Target directory {} is not empty. \n\n\tContinue?".format(tgtdir))
+                if resp == SIG_YES:
+                    #msgBox("You chose to continue ({})".format(resp))
+                    pass
+                else:
+                    msgBox("You chose not to continue ({})".format(resp))
+                    return
         else:
             os.mkdir(tgtdir)
 
