@@ -243,24 +243,24 @@ def saveXcfToPng(srcdir, NP, MLC, OnlyLabels):
 #
 ############################################################################
 #
-register (
-    "saveXcfToPng",           # Name registered in Procedure Browser
-    "Convert XCF images from source 'augmented' directory to output PNG images in target 'png' directory. Includes extraction of labels.",       # Widget title
-    "Convert XCF images from source 'augmented' directory to output PNG images in target 'png' directory. Includes extraction of labels.",
-    "Kiran Maheriya",         # Author
-    "Kiran Maheriya",         # Copyright Holder
-    "March 2016",             # Date
-    "4. Convert XCF to Final PNG for DB",  # Menu Entry
-    "",     # Image Type
-    [
-    ( PF_DIRNAME, "srcdir", "Input 'augmented' Directory:", xcfDir ),
-    ( PF_BOOL,    "NP",     "Save Nearest Point as a label?", saveNP),
-    ( PF_BOOL,    "MLC",    "Save labels in Multi-Label Classification (MLC) format?", saveMLC),
-    ( PF_BOOL,    "OnlyLabels",    "Save Only Labels? ", saveLabels)
-    ],
-    [],
-    saveXcfToPng,   # Matches to name of function being defined
-    menu = "<Image>/DVIA/DirectoryLevelOps"  # Menu Location
-    )   # End register
-
-main() 
+##--register (
+##--    "saveXcfToPng",           # Name registered in Procedure Browser
+##--    "Convert XCF images from source 'augmented' directory to output PNG images in target 'png' directory. Includes extraction of labels.",       # Widget title
+##--    "Convert XCF images from source 'augmented' directory to output PNG images in target 'png' directory. Includes extraction of labels.",
+##--    "Kiran Maheriya",         # Author
+##--    "Kiran Maheriya",         # Copyright Holder
+##--    "March 2016",             # Date
+##--    "4. Convert XCF to Final PNG for DB",  # Menu Entry
+##--    "",     # Image Type
+##--    [
+##--    ( PF_DIRNAME, "srcdir", "Input 'augmented' Directory:", xcfDir ),
+##--    ( PF_BOOL,    "NP",     "Save Nearest Point as a label?", saveNP),
+##--    ( PF_BOOL,    "MLC",    "Save labels in Multi-Label Classification (MLC) format?", saveMLC),
+##--    ( PF_BOOL,    "OnlyLabels",    "Save Only Labels? ", saveLabels)
+##--    ],
+##--    [],
+##--    saveXcfToPng,   # Matches to name of function being defined
+##--    menu = "<Image>/DVIA/DirectoryLevelOps"  # Menu Location
+##--    )   # End register
+##--
+##--main() 

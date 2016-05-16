@@ -15,8 +15,8 @@
 #  9. Resize (different object sizes, while retaining same image size)
 # 10. Shifts (pan)
 #
-# Each transformation is used with different parameters to create 4 images each.
-# This create 40 augmented images per 1 original image.
+# Each transformation is used with different parameters to create 4-6 images each.
+# This create about 40 augmented images per 1 original image.
 #
 ############################################################################
 #
@@ -24,6 +24,7 @@ from gimpfu import *
 from gimpenums import *
 
 import sys, os
+from glob import glob
 import pickle
 import pygtk
 import re
@@ -33,15 +34,23 @@ import gtk
 
 PI = 3.14159265358979323846
 
+# Constants used by the script
+PNG_WIDTH   = 240
+PNG_HEIGHT  = 240
+CLS_IDS     = {'catchall' : 0, 'stair' : 1, 'curb' : 2, 'doorframe': 3} #, 'badfloor': 4, 'drop': 5 }
+CLASSES     = ['catchall', 'stair', 'curb', 'doorframe'] #, 'badfloor', 'drop']
+MLC_LBLS    = [0, 0, 0, 0] #, 0, 0]
+LABELFILE   = 'labels'
+
+
 #
-origDir = os.path.join(os.environ['HOME'], "Projects/IMAGES/dvia")
-augDir = os.path.join(os.environ['HOME'], "Projects/IMAGES/dvia")
+origDir = os.path.join(os.environ['HOME'], "Projects/IMAGES/dvia/xcf")
 #
 
 #scriptpath = os.path.dirname(os.path.realpath( __file__ ))
 #scriptrootdir  = os.path.sep.join(scriptpath.split(os.path.sep)[:-4])
-sys.stderr = open(os.path.join(os.environ['HOME'], '/tmp/augmenter_stderr.log'), 'w')
-sys.stdout = open(os.path.join(os.environ['HOME'], '/tmp/augmenter_stdout.log'), 'w')
+#sys.stderr = open(os.path.join(os.environ['HOME'], '/tmp/augmenter_stderr.log'), 'w')
+#sys.stdout = open(os.path.join(os.environ['HOME'], '/tmp/augmenter_stdout.log'), 'w')
 
 def msgBox(msg, btype=gtk.MESSAGE_INFO):
     flag = gtk.DIALOG_MODAL|gtk.DIALOG_DESTROY_WITH_PARENT
@@ -49,21 +58,62 @@ def msgBox(msg, btype=gtk.MESSAGE_INFO):
     msgBox.run()
     msgBox.destroy()
 
+def questionBox(msg):
+    btype=gtk.MESSAGE_QUESTION
+    flag = gtk.DIALOG_DESTROY_WITH_PARENT
+    msgBox = gtk.MessageDialog(None, flag, btype, gtk.BUTTONS_YES_NO, msg)
+    resp = msgBox.run()
+    msgBox.destroy()
+    return resp
+
+def mymsg(msg):
+    #print msg
+    pass
+
 
 '''
-This class takes a single image as input, and stores new images into tgtdir
+This class takes a single XCF directory as input, and stores new images into tgtdir
 '''
 class ImageAugmentor:
 
-    def __init__(self, srcdir, tgtdir):
+    def __init__(self, srcdir, tgtdir, filelist, NP, MLC, OnlyLabels):
         self.srcdir = srcdir
         self.tgtdir = tgtdir
+        self.filelist   = filelist
+        self.NP         = NP
+        self.MLC        = MLC
+        self.OnlyLabels = OnlyLabels
+
+    def run(self):
+        # Inspite of this if-then-else, a labels.txt without NP/MLC is always saved.
+        if self.NP:
+            if self.MLC:
+                LABELFILE = 'labels_NP_MLC'
+            else:
+                LABELFILE = 'labels_NP'
+        else:
+            if self.MLC:
+                LABELFILE = 'labels_MLC'
+            else:
+                LABELFILE = 'labels'
+        LABELFILE += '.txt'
+        self.lfile   = open(os.path.join(self.tgtdir, LABELFILE), 'w')
+        self.lfile2  = open(os.path.join(self.tgtdir, 'labels.txt'), 'w')
+
+        for srcfile in self.filelist:
+            if not self.augment(srcfile):
+                msgBox('Could not augment DB for image {}. Exiting.'.format(srcfile), gtk.MESSAGE_ERROR)
+                return False
+        self.lfile.close()
+        self.lfile2.close()
+        return True
 
     def augment(self, filename):
-        '''Public function. This function should be called for each image.
+        '''This function should be called for each image.
         '''
-        self.basename = '.'.join(filename.split('.')[:-1]) ## Remove extension
-        srcfilepath = os.path.join(self.srcdir, filename)
+        basefilename = filename.split('/')[-1]
+        self.basename = '.'.join(basefilename.split('.')[:-1]) ## Remove extension
+        srcfilepath = filename # os.path.join(self.srcdir, filename)
 
         # Original img with all layers
         self.img = pdb.gimp_file_load(srcfilepath, srcfilepath)
@@ -81,8 +131,8 @@ class ImageAugmentor:
         self.labels = self.ldata['labels']
         self.layers = self.ldata['layers']
         if self.labels['catchall']:
-            self.nps = {'catchall' : (self.img.width/2, self.img.height/2),  'stair' : (), 'curb' : (), 'doorframe': (), 'badfloor': () }
-            self.bbs = {'catchall' : (0,0, self.img.width, self.img.height), 'stair' : (), 'curb' : (), 'doorframe': (), 'badfloor': () }
+            self.nps = {'catchall' : (self.img.width/2, self.img.height/2), 'stair' : (), 'curb' : (), 'doorframe': () } #, 'badfloor': () }
+            self.bbs = {'catchall' : (0,0, self.img.width,self.img.height), 'stair' : (), 'curb' : (), 'doorframe': () } #, 'badfloor': () }
             self.ldata['NP'] = self.nps
             self.ldata['BB'] = self.bbs
             self.img.attach_new_parasite('ldata', 5, pickle.dumps(self.ldata)) # Update the image parasites for later use 
@@ -121,7 +171,7 @@ class ImageAugmentor:
         '''Add Noise
         '''
 
-        for noiseAmount in (0.10, 0.18, 0.26, 0.34):
+        for noiseAmount in (0.10, 0.18, 0.23, 0.28):
             nimg = pdb.gimp_image_duplicate(self.img)
             pdb.gimp_image_set_active_layer(nimg, pdb.gimp_image_get_layer_by_name(nimg, 'base'))
             try:
@@ -266,9 +316,9 @@ class ImageAugmentor:
         idx = 1
         for (r, brightness, sharpness) in ((20, 0.40, 1.40),
                                            (10, 0.50, 0.50),
-                                           (10, 0.75, 0.85),
-                                           ( 5, 0.85, 0.40),
-                                           (20, 0.90, 0.30)):
+                                           (10, 0.65, 0.85),
+                                           ( 5, 0.70, 0.40),
+                                           (20, 0.85, 0.30)):
             nimg = pdb.gimp_image_duplicate(self.img)
             base = pdb.gimp_image_get_layer_by_name(nimg, 'base')
             try:
@@ -455,11 +505,70 @@ class ImageAugmentor:
                     ldata['NP'][lbl] = (bbox[1] + (bbox[3]-bbox[1])/2, bbox[4]) # Bottom center of bb
                 pdb.gimp_selection_none(img)
     
-        try: img.attach_new_parasite('ldata', 5, pickle.dumps(ldata))
-        except:
-            msgBox('Could not save ldata parasite for image {}: {}'.format(str(img), sys.exc_info()[0]), gtk.MESSAGE_ERROR)
-            raise
-            return
+        self.ldata = ldata
+        #try: img.attach_new_parasite('ldata', 5, pickle.dumps(ldata))
+        #except:
+        #    msgBox('Could not save ldata parasite for image {}: {}'.format(str(img), sys.exc_info()[0]), gtk.MESSAGE_ERROR)
+        #    raise
+        #    return
+
+    def appendLabelsFile(self, img, fname):
+        '''
+        Extract parasites to update labels file and save image
+        '''
+        #para = img.parasite_find('ldata')
+        #self.ldata = pickle.loads(para.data)
+        self.labels = self.ldata['labels']
+        self.layers = self.ldata['layers']
+        self.nps = self.ldata['NP']
+        self.bbs = self.ldata['BB']
+
+        nplbl = None
+        ymax  = 0
+        for lbl in self.nps:
+            if len(self.nps[lbl]) > 0:
+                if self.nps[lbl][1] >= ymax:
+                    nplbl = lbl
+                    ymax = self.nps[lbl][1]
+
+        # If nplbl is still None, that means we didn't find any NP. Image didn't have an NP.
+        if nplbl is None:
+            print "Error! NP data not found!"
+            return False
+
+        labelstr = '{} {}'.format(fname, CLS_IDS[nplbl])
+        self.lfile2.write('{}\n'.format(labelstr))
+        if not self.MLC: # Need to save label for one class and one NP
+            if self.NP:
+                # Add NP x and y coordinates
+                # Normalize x and y co-ordinate values
+                x, y = map(float, self.nps[nplbl])
+                x = round(x/self.img.width, 3)
+                y = round(y/self.img.height, 3)
+                labelstr += ' {} {}'.format(x, y)
+        else: # Need to save multi-label class format and multiple NPs
+            labelstr = fname
+            cls = MLC_LBLS
+            npstr = ''
+            for lbl in self.labels:
+                if self.labels[lbl]:
+                    cls[CLS_IDS[nplbl]] = 1
+                    if self.NP:
+                        # Accumulate all NP x and y coordinates
+                        if len(self.nps[lbl]) == 0:
+                            print 'Error! For label {l} in image {i}, could not find NP'.format(i=self.basename, l=lbl)
+                            return False
+                        # Normalize x and y co-ordinate values
+                        x, y = map(float, self.nps[lbl])
+                        x = round(x/self.img.width, 3)
+                        y = round(y/self.img.height, 3)
+                        npstr += ' {} {}'.format(x, y)
+                        #npstr += ' ' + ' '.join(map(lambda x:str(round(float(x)/float(self.img.width), 3)), self.nps[lbl]))
+            labelstr += ' ' + ' '.join(map(lambda x: str(x), cls))
+            if self.NP:
+                labelstr += npstr
+        self.lfile.write('{}\n'.format(labelstr))
+        return True
 
 
     def getImageFlatCopy(self, img):
@@ -470,14 +579,31 @@ class ImageAugmentor:
         nlyr.name = 'base'
         return limg
 
+    def flattenImage(self, img):
+        # Move base layer to the top; obscuring everything else ...
+        pdb.gimp_image_reorder_item(img, pdb.gimp_image_get_layer_by_name(img, 'base'), None, -1)
+        # ... and flatten the image to remove other layers
+        base = pdb.gimp_image_flatten(img)
+        base.name = 'base'
+        return base
 
     def saveImage(self, img, suffix, updateParasites=False):
-        '''Save image using tgtDir, basename, and suffix
         '''
-        fname = os.path.join(self.tgtdir, '{}_{}.xcf'.format(self.basename, suffix))
+        Save image using tgtDir, basename, and suffix. Conditionally update the parasites
+        Also append labels data to labels file/s
+        '''
+        basename = '{}_{}.png'.format(self.basename, suffix)
+        fname = os.path.join(self.tgtdir, basename)
         self.updateParasites(img)
+        if not self.appendLabelsFile(img, basename):
+            msgBox("Error: Problem finding label data. Abort!", gtk.MESSAGE_ERROR)
+            raise
+
         try:
-            pdb.gimp_xcf_save(0, img, img.active_drawable, fname, fname)
+            compression = 9;
+            pdb.gimp_image_scale(img, PNG_WIDTH, PNG_HEIGHT)
+            base = self.flattenImage(img)
+            pdb.file_png_save(img, base, fname, fname, 0, compression, 0, 0, 0, 0, 0)
         except:
             msgBox('Could not save image {}: {}'.format(fname, sys.exc_info()[0]), gtk.MESSAGE_ERROR)
             raise
@@ -485,45 +611,97 @@ class ImageAugmentor:
 
 
 
-def createAugmentedXcf(srcdir, tgtdir):
-    """Registered function; Creates augmented images based on original set of images.
-    Operates on all iamges in srcPath directory to create images in tgtPath directory.
+def createAugmented(srcdir, MLC):
+    """Registered function; Creates augmented images based on original labeled set of images.
+    Operates on all images in srcdir directory to create images in a parallel 'augmented' directory.
+    NP : If true, saves Nearest points; if false, NPs are not saved
+    MLC: IF true, saves all class labels; if false, only one class is saved.
+    # In case of MLC=False, the class with NP closest to the bottom is selected automatically
     """
-    # Find all of the files in the source and target directories
-    filelist = os.listdir(srcdir)
-    filelist.sort()
-    # Find all of the xcf files in the list
-    if srcdir == tgtdir:
-        msgBox("Source and target directories must be different ({})".format(srcdir), gtk.MESSAGE_ERROR)
+    NP         = True
+    OnlyLabels = False
+
+    xcfdir    = os.path.realpath(srcdir)
+    xcf       = srcdir.split('/')[-1]
+    tgtAugdir = os.path.join('/'.join(xcfdir.split('/')[:-1]), 'augmented')
+
+    if xcf != 'xcf':
+        msgBox("Source dir ({}) is not named 'xcf'.\nThis is a requirement as a part of the flow. Aborting!".format(xcf), gtk.MESSAGE_ERROR)
         return
 
-    aug = ImageAugmentor(srcdir, tgtdir)
-    for srcfile in filelist:
-        if not srcfile.lower().endswith('.xcf'):
-            continue # skip non-xcf files
-        if not aug.augment(srcfile):
-            msgBox('Could not augment DB for image {}. Exiting.'.format(srcfile), gtk.MESSAGE_ERROR)
+    if not os.path.exists(tgtAugdir):
+        os.mkdir(tgtAugdir)
+
+    labels_ = os.listdir(xcfdir)
+    labels_.sort()
+    filelists = {}
+    labels = []
+    # Consider only non-empty directories (useful visual check for the user when these dirs are shown)
+    for label in labels_:
+        srcdir    = os.path.join(xcfdir, label)
+        filelist  = glob(srcdir+os.path.sep+'*.xcf')
+        if len(filelist) == 0:
+            continue
+        filelist.sort()
+        filelists[label] = filelist # store sorted filelist
+        labels.append(label)
+
+    # Each non-empty directory in source 'xcf/*', will be augmented.
+    # If the corresponding dir in 'augmented' dir is non-empty, this script will abort.
+    # NOTE: To avoid a certain directory from being augmented, temporarily move it out of the 'xcf' directory 
+    #       before running this script and move back later. This is a workaround for incremental augmentation
+    #       or in the case of a merged 'xcf' directory.
+    for label in labels:
+        tgtdir    = os.path.join(tgtAugdir, label)
+        if os.path.exists(tgtdir):
+            # Make sure that directory is empty. Otherwise quit.
+            flist = os.listdir(tgtdir)
+            if len(flist) > 0:
+                msgBox("Target dir {} is not empty. Aborting!".format(tgtdir), gtk.MESSAGE_ERROR)
+                return # quit if non-empty directory is found.
+        else:
+            os.mkdir(tgtdir)
+
+    # At this point everything is in order. Start the augmentation...
+    msgBox("Images from following directories will be augmented:\n\t{}".format(labels), gtk.MESSAGE_INFO)
+
+    # Find all of the files in the source directory
+    for label in labels:
+        tgtdir    = os.path.join(tgtAugdir, label)
+        srcdir    = os.path.join(xcfdir, label)
+        filelist  = filelists[label]
+        print("Augmenting {} directory.".format(label))
+        aug = ImageAugmentor(srcdir, tgtdir, filelist, NP, MLC, OnlyLabels)
+        if not aug.run():
             return
+        print("{} directory is augmented.".format(label))
+
+    print("The augmented PNG files and {} are successfully created in {}".format(LABELFILE, tgtAugdir))
+
+
+
+# For GUI options.
+saveMLC    = False
 
 #
 ############################################################################
 #
-##--register (
-##--    "createAugmentedXcf",     # Name registered in Procedure Browser
-##--    "Create augmented images for CNN training", # Widget title
-##--    "Create augmented images for CNN training.",
-##--    "Kiran Maheriya",         # Author
-##--    "Kiran Maheriya",         # Copyright Holder
-##--    "March 2016",             # Date
-##--    "3. Create Augmented XCF Images", # Menu Entry
-##--    "",     # Image Type
-##--    [
-##--    ( PF_DIRNAME, "srcdir", "Source Directory with Original XCF Images:", origDir ),
-##--    ( PF_DIRNAME, "tgtdir", "Output Directory to Save Augmented Images:", augDir ),
-##--    ],
-##--    [],
-##--    createAugmentedXcf,   # Matches to name of function being defined
-##--    menu = "<Image>/DVIA/DirectoryLevelOps"  # Menu Location
-##--    )   # End register
-##--
-##--main() 
+register (
+    "createAugmented",     # Name registered in Procedure Browser
+    "Create augmented images for CNN training (saved as PNG)", # Widget title
+    "Create augmented images for CNN training (saved as PNG).",
+    "Kiran Maheriya",         # Author
+    "Kiran Maheriya",         # Copyright Holder
+    "May 2016",               # Date
+    "3. Create Augmented Images (PNG)", # Menu Entry
+    "",     # Image Type
+    [
+    ( PF_DIRNAME, "srcdir", "Source Directory Containing Labeled XCF Images:", origDir ),
+    ( PF_BOOL,    "MLC",    "Save labels in Multi-Label Classification (MLC) format?", saveMLC),
+    ],
+    [],
+    createAugmented,   # Matches to name of function being defined
+    menu = "<Image>/DVIA/DirectoryLevelOps"  # Menu Location
+    )   # End register
+
+main() 
