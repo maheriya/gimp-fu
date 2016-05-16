@@ -15,8 +15,8 @@ import gtk
 
 
 # Constants used by the script
-PNG_WIDTH   = 250
-PNG_HEIGHT  = 250
+PNG_WIDTH   = 48
+PNG_HEIGHT  = 48
 CLS_IDS     = {'catchall' : 0, 'stair' : 1, 'curb' : 2, 'doorframe': 3} #, 'badfloor': 4, 'drop': 5 }
 CLASSES     = ['catchall', 'stair', 'curb', 'doorframe'] #, 'badfloor', 'drop']
 MLC_LBLS    = [0, 0, 0, 0] #, 0, 0]
