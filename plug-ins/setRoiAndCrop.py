@@ -15,7 +15,7 @@ pygtk.require('2.0')
 import gtk
 
 IMG_SIZE_W = 300
-IMG_SIZE_H = 300
+IMG_SIZE_H = 400
 
 srcDir = os.path.join(os.environ['HOME'], "Projects/IMAGES/dvia")
 

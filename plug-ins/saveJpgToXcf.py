@@ -109,7 +109,9 @@ def saveJpgToXcf(srcPath, tgtPath):
         (r, ext) = os.path.splitext(fname.lower())
         if ext == '.jpg' or ext == '.jpeg' or ext == '.png':
             srcFileList.append(fname)
-            tgtFileList.append("{l}_{n:0>5}.xcf".format(l=label, n=imgid))
+            #tgtFileList.append("{l}_{n:0>5}.xcf".format(l=label, n=imgid))
+            # Not needed for object detection
+            tgtFileList.append("{n:0>5}.xcf".format(n=imgid))
             imgid += 1
 
     # Dictionary - source & target file names
