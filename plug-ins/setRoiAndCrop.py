@@ -14,7 +14,9 @@ import pygtk
 pygtk.require('2.0')
 import gtk
 
-IMG_SIZE = 300
+# Since the new RoI for object detection is 300:400, making the image size 500 is safe
+IMG_SIZE_W = 300
+IMG_SIZE_H = 400
 
 srcDir = os.path.join(os.environ['HOME'], "Projects/IMAGES/dvia")
 
@@ -50,24 +52,22 @@ def processImage(img):
     pdb.gimp_displays_flush()
 
     # Now grow the selection by 7 percent to cover more around RoI
+    print bb
     roi_w = bb[3]-bb[1]
     roi_h = bb[4]-bb[2]
     roi_x = bb[1]
     roi_y = bb[2]
-    # Crop image down. Clamp to smaller of height or width if selection is not square
-    if (roi_h < roi_w):
-        nw   = roi_h
-        nh   = roi_h
-    else:
-        nw   = roi_w
-        nh   = roi_w
+    # Selection need not be square now, infact it is 3:4
+    nw   = roi_w
+    nh   = roi_h
     #msgBox("Crop stats: X:{x}, Y:{y}, W:{w}, H:{h}".format(x=roi_x, y=roi_y, w=nw, h=nh), gtk.MESSAGE_INFO, 0)
     pdb.gimp_image_resize(img, nw, nh, -roi_x, -roi_y)
 
     # Now scale the image down to have max of 480 dimension (images smaller than this are left untouched)
-    if nw > IMG_SIZE:
-        nw = IMG_SIZE
-        nh = IMG_SIZE
+    if nw > IMG_SIZE_W:
+        nw = IMG_SIZE_W
+    if nh > IMG_SIZE_H:
+        nh = IMG_SIZE_H
     pdb.gimp_image_scale(img, nw, nh)
     pdb.gimp_selection_none(img)
     try:
