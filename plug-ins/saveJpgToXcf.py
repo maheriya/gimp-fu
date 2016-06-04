@@ -160,7 +160,7 @@ register (
     ],
     [],
     saveJpgToXcf,      # Matches to name of function being defined
-    menu = "<Image>/DVIA/DirectoryLevelOps"   # Menu Location
+    menu = "<Image>/DVIA/Dir Ops (Det)"  # Menu Location
     )   # End register
 #
 main() 
