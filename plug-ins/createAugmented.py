@@ -37,20 +37,14 @@ PI = 3.14159265358979323846
 # Constants used by the script
 PNG_WIDTH   = 300
 PNG_HEIGHT  = 400
-CLS_IDS     = {'stair' : 1, 'curb' : 2, 'doorframe': 3} #, 'badfloor': 4, 'drop': 5 } ## catchall should be ignored
-CLASSES     = ['stair', 'curb', 'doorframe'] #, 'badfloor', 'drop']                   ## ditto
-MLC_LBLS    = [0, 0, 0] #, 0, 0]   ## no place for catchall: All zeros mean full catchall/background image
+CLS_IDS     = {'stair' : 0, 'curb' : 1, 'doorframe': 2}  ## catchall should be ignored
+CLASSES     = ['stair', 'curb', 'doorframe']             ## ditto
+MLC_LBLS    = [0, 0, 0] ## no place for catchall: All zeros mean full catchall/background patch
 LABELFILE   = 'labels'
 
 
 #
 origDir = os.path.join(os.environ['HOME'], "Projects/IMAGES/dvia/xcf")
-#
-
-#scriptpath = os.path.dirname(os.path.realpath( __file__ ))
-#scriptrootdir  = os.path.sep.join(scriptpath.split(os.path.sep)[:-4])
-#sys.stderr = open(os.path.join(os.environ['HOME'], '/tmp/augmenter_stderr.log'), 'w')
-#sys.stdout = open(os.path.join(os.environ['HOME'], '/tmp/augmenter_stdout.log'), 'w')
 
 def msgBox(msg, btype=gtk.MESSAGE_INFO):
     flag = gtk.DIALOG_MODAL|gtk.DIALOG_DESTROY_WITH_PARENT
@@ -548,12 +542,12 @@ class ImageAugmentor:
                 labelstr += ' {} {}'.format(x, y)
         else: # Need to save multi-label class format and multiple NPs
             labelstr = fname
-            cls = MLC_LBLS
+            cls = list(MLC_LBLS)
             npstr = ''
             for lbl in self.labels:
                 if self.labels[lbl]:
-                    cls[CLS_IDS[nplbl]] = 1
-                    if self.NP:
+                    cls[CLS_IDS[lbl]] = 1
+                    if self.NP: ## We assume that if NP is enabled, so is BB
                         # Accumulate all NP x and y coordinates
                         if len(self.nps[lbl]) == 0:
                             print 'Error! For label {l} in image {i}, could not find NP'.format(i=self.basename, l=lbl)
@@ -657,13 +651,16 @@ def createAugmented(srcdir, MLC):
             # Make sure that directory is empty. Otherwise quit.
             flist = os.listdir(tgtdir)
             if len(flist) > 0:
-                msgBox("Target dir {} is not empty. Aborting!".format(tgtdir), gtk.MESSAGE_ERROR)
-                return # quit if non-empty directory is found.
+                if OnlyLabels:
+                    msgBox("Target dir is not empty. Continuing since OnlyLabels=True", gtk.MESSAGE_ERROR)
+                else:
+                    msgBox("Target dir {} is not empty. Aborting!".format(tgtdir), gtk.MESSAGE_ERROR)
+                    return # quit if non-empty directory is found.
         else:
             os.mkdir(tgtdir)
 
     # At this point everything is in order. Start the augmentation...
-    msgBox("Images from following directories will be augmented:\n\t{}".format(labels), gtk.MESSAGE_INFO)
+    msgBox("Working on following directories:\n\t{}".format(labels), gtk.MESSAGE_INFO)
 
     # Find all of the files in the source directory
     for label in labels:

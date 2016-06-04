@@ -18,9 +18,6 @@ import gtk
 import gtk.glade
 
 scriptpath = os.path.dirname(os.path.realpath( __file__ ))
-#scriptrootdir  = os.path.sep.join(scriptpath.split(os.path.sep)[:-4])
-sys.stderr = open(os.path.join(os.environ['HOME'], '/tmp/gimpstderr.txt'), 'w')
-sys.stdout = open(os.path.join(os.environ['HOME'], '/tmp/gimpstdout.txt'), 'w')
 
 class labelCreator:
     def __init__(self, img):
@@ -35,12 +32,12 @@ class labelCreator:
             self.labels = self.ldata['labels']
             self.layers = self.ldata['layers']
         else:
-            self.labels = {'catchall' : False, 'stair' : False, 'curb' : False, 'doorframe': False, 'badfloor': False, 'drop': False }
-            self.layers = {'catchall' : False, 'stair' : False, 'curb' : False, 'doorframe': False, 'badfloor': False, 'drop': False }
+            self.labels = {'catchall' : False, 'stair' : False, 'curb' : False, 'doorframe': False }
+            self.layers = {'catchall' : False, 'stair' : False, 'curb' : False, 'doorframe': False }
             self.ldata = {'labels': self.labels, 'layers': self.layers}
 
-        self.nps = {'catchall' : (), 'stair' : (), 'curb' : (), 'doorframe': (), 'badfloor': () }
-        self.bbs = {'catchall' : (), 'stair' : (), 'curb' : (), 'doorframe': (), 'badfloor': () }
+        self.nps = {'catchall' : (), 'stair' : (), 'curb' : (), 'doorframe': () }
+        self.bbs = {'catchall' : (), 'stair' : (), 'curb' : (), 'doorframe': () }
         self.ldata['NP'] = self.nps
         self.ldata['BB'] = self.bbs
 
@@ -107,9 +104,6 @@ class labelCreator:
         self.saveParasite()
         try:self.win.destroy()
         except: pass
-#         (nb, brushes) = pdb.gimp_brushes_get_list('npstar')
-#         for np in brushes:
-#             pdb.gimp_brush_delete(np)
         gtk.main_quit()
 
     def labelChanged(self, cbox):
