@@ -14,7 +14,8 @@ import pygtk
 pygtk.require('2.0')
 import gtk
 
-IMG_SIZE = 300
+IMG_SIZE_W = 300
+IMG_SIZE_H = 300
 
 srcDir = os.path.join(os.environ['HOME'], "Projects/IMAGES/dvia")
 
@@ -43,31 +44,35 @@ def processImage(img):
 
     # Crop around RoI
     bb  = pdb.gimp_selection_bounds(img)
-    roi = pdb.gimp_selection_save(img) #  roi is a channel
+    roi = pdb.gimp_selection_save(img) # roi is a channel
     pdb.gimp_item_set_name(roi, "RoI")
     pdb.gimp_item_set_visible(roi, TRUE)
     pdb.gimp_image_select_item(img, 2, roi) # absolute selection
     pdb.gimp_displays_flush()
 
-    # Now grow the selection by 7 percent to cover more around RoI
+    # Now get the RoI coordinates
     roi_w = bb[3]-bb[1]
     roi_h = bb[4]-bb[2]
     roi_x = bb[1]
     roi_y = bb[2]
-    # Crop image down. Clamp to smaller of height or width if selection is not square
-    if (roi_h < roi_w):
-        nw   = roi_h
-        nh   = roi_h
-    else:
-        nw   = roi_w
-        nh   = roi_w
-    #msgBox("Crop stats: X:{x}, Y:{y}, W:{w}, H:{h}".format(x=roi_x, y=roi_y, w=nw, h=nh), gtk.MESSAGE_INFO, 0)
+    # Crop image down. Clamp to smaller of height or width if selection is not correct aspect
+    aspect = float(roi_w)/float(roi_h)
+    ASPECT = float(IMG_SIZE_W)/float(IMG_SIZE_H)
+    nh = roi_h
+    nw = roi_w
+    #print 'aspect={}, ASPECT={}'.format(aspect, ASPECT)
+    if (aspect > ASPECT+0.002 or aspect < ASPECT-0.002): # Aspect is not correct. User must have selected improperly
+        if (aspect > ASPECT): # Wider selection. Scale down wider dimension -- the width
+            nw   = int(float(roi_h)*ASPECT)
+        else:                 # Taller selection. Scale down taller dimension --  the height
+            nh   = int(float(roi_w)*ASPECT)
+    #print("Crop stats: X:{x}, Y:{y}, W:{w}, H:{h}, new aspect:{a}".format(x=roi_x, y=roi_y, w=nw, h=nh, a=float(nw)/float(nh)))
     pdb.gimp_image_resize(img, nw, nh, -roi_x, -roi_y)
 
-    # Now scale the image down to have max of 480 dimension (images smaller than this are left untouched)
-    if nw > IMG_SIZE:
-        nw = IMG_SIZE
-        nh = IMG_SIZE
+    # Now scale the image down to have max of IMG_SIZE_W/H dimension (images smaller than this are left untouched)
+    if nw > IMG_SIZE_W or nh > IMG_SIZE_H:
+        nw = IMG_SIZE_W
+        nh = IMG_SIZE_H
     pdb.gimp_image_scale(img, nw, nh)
     pdb.gimp_selection_none(img)
     try:
