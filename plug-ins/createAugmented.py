@@ -37,9 +37,9 @@ PI = 3.14159265358979323846
 # Constants used by the script
 PNG_WIDTH   = 300
 PNG_HEIGHT  = 400
-CLS_IDS     = {'catchall' : 0, 'stair' : 1, 'curb' : 2, 'doorframe': 3} #, 'badfloor': 4, 'drop': 5 }
-CLASSES     = ['catchall', 'stair', 'curb', 'doorframe'] #, 'badfloor', 'drop']
-MLC_LBLS    = [0, 0, 0, 0] #, 0, 0]
+CLS_IDS     = {'stair' : 1, 'curb' : 2, 'doorframe': 3} #, 'badfloor': 4, 'drop': 5 } ## catchall should be ignored
+CLASSES     = ['stair', 'curb', 'doorframe'] #, 'badfloor', 'drop']                   ## ditto
+MLC_LBLS    = [0, 0, 0] #, 0, 0]   ## no place for catchall: All zeros mean full catchall/background image
 LABELFILE   = 'labels'
 
 
@@ -118,9 +118,7 @@ class ImageAugmentor:
         # Original img with all layers
         self.img = pdb.gimp_file_load(srcfilepath, srcfilepath)
         self.base = pdb.gimp_image_get_layer_by_name(self.img, 'base')
-        print self.base
         self.grp = pdb.gimp_image_get_layer_by_name(self.img, 'group')
-        print self.grp
 
         pdb.gimp_context_set_background('#000000')
         pdb.gimp_context_set_foreground('#ffffff')
@@ -132,8 +130,6 @@ class ImageAugmentor:
         self.ldata = pickle.loads(para.data)
         self.labels = self.ldata['labels']
         self.layers = self.ldata['layers']
-        print self.labels
-        print self.layers
         if self.labels['catchall']:
             self.nps = {'catchall' : (self.img.width/2, self.img.height/2), 'stair' : (), 'curb' : (), 'doorframe': () } #, 'badfloor': () }
             self.bbs = {'catchall' : (0,0, self.img.width,self.img.height), 'stair' : (), 'curb' : (), 'doorframe': () } #, 'badfloor': () }
@@ -143,8 +139,6 @@ class ImageAugmentor:
 
         self.nps = self.ldata['NP']
         self.bbs = self.ldata['BB']
-        print self.nps
-        print self.bbs
 
         # Augmentor routines
         if not self.augNoise():
@@ -543,7 +537,6 @@ class ImageAugmentor:
             return False
 
         labelstr = '{} {}'.format(fname, CLS_IDS[nplbl])
-        # Shiva #labelstr = '{}'.format(fname)
         self.lfile2.write('{}\n'.format(labelstr))
         if not self.MLC: # Need to save label for one class and one NP
             if self.NP:
@@ -639,33 +632,50 @@ def createAugmented(srcdir, MLC):
     if not os.path.exists(tgtAugdir):
         os.mkdir(tgtAugdir)
 
+    labels_ = os.listdir(xcfdir)
+    labels_.sort()
     filelists = {}
     labels = []
     # Consider only non-empty directories (useful visual check for the user when these dirs are shown)
+    for label in labels_:
+        srcdir    = os.path.join(xcfdir, label)
+        filelist  = glob(srcdir+os.path.sep+'*.xcf')
+        if len(filelist) == 0:
+            continue
+        filelist.sort()
+        filelists[label] = filelist # store sorted filelist
+        labels.append(label)
 
-    filelist  = glob(xcfdir+os.path.sep+'*.xcf')
-    if len(filelist) == 0:
-        return
-    filelist.sort()
+    # Each non-empty directory in source 'xcf/*', will be augmented.
+    # If the corresponding dir in 'augmented' dir is non-empty, this script will abort.
+    # NOTE: To avoid a certain directory from being augmented, temporarily move it out of the 'xcf' directory 
+    #       before running this script and move back later. This is a workaround for incremental augmentation
+    #       or in the case of a merged 'xcf' directory.
+    for label in labels:
+        tgtdir    = os.path.join(tgtAugdir, label)
+        if os.path.exists(tgtdir):
+            # Make sure that directory is empty. Otherwise quit.
+            flist = os.listdir(tgtdir)
+            if len(flist) > 0:
+                msgBox("Target dir {} is not empty. Aborting!".format(tgtdir), gtk.MESSAGE_ERROR)
+                return # quit if non-empty directory is found.
+        else:
+            os.mkdir(tgtdir)
 
-    tgtdir    = tgtAugdir
-    if os.path.exists(tgtdir):
-        # Make sure that directory is empty. Otherwise quit.
-        flist = os.listdir(tgtdir)
-        if len(flist) > 0:
-            msgBox("Target dir {} is not empty. Aborting!".format(tgtdir), gtk.MESSAGE_ERROR)
-            return # quit if non-empty directory is found.
-    else:
-        os.mkdir(tgtdir)
+    # At this point everything is in order. Start the augmentation...
+    msgBox("Images from following directories will be augmented:\n\t{}".format(labels), gtk.MESSAGE_INFO)
 
+    # Find all of the files in the source directory
+    for label in labels:
+        tgtdir    = os.path.join(tgtAugdir, label)
+        srcdir    = os.path.join(xcfdir, label)
+        filelist  = filelists[label]
+        print("Augmenting {} directory.".format(label))
+        aug = ImageAugmentor(srcdir, tgtdir, filelist, NP, MLC, OnlyLabels)
+        if not aug.run():
+            return
+        print("{} directory is augmented.".format(label))
 
-    tgtdir    = tgtAugdir
-    srcdir    = xcfdir
-    print("Augmenting {} directory.".format(srcdir))
-    aug = ImageAugmentor(srcdir, tgtdir, filelist, NP, MLC, OnlyLabels)
-    if not aug.run():
-        return
-    print("{} directory is augmented.".format(srcdir))
     print("The augmented PNG files and {} are successfully created in {}".format(LABELFILE, tgtAugdir))
 
 
