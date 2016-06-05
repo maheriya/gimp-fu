@@ -24,8 +24,8 @@ from scipy.misc import imresize, imread, imsave
 # For GUI directory options.
 augDir = os.path.join(os.environ['HOME'], "Projects/IMAGES/dvia/augmented")
 #
-pngWidth   = 48
-pngHeight  = 48
+pngWidth   = 300
+pngHeight  = 400
 
 SIG_OK     = -5
 SIG_CANCEL = -6
@@ -109,7 +109,7 @@ def scalePngFinal(srcdir, width, height):
         print "Converting {} directory to PNG.".format(label)
         for srcfile in filelist:
             img    = imread(srcfile, mode='RGB')
-            sclimg = imresize(img, (width, height), interp='bicubic')
+            sclimg = imresize(img, (height,width), interp='bicubic')
             imsave(os.path.join(tgtdir, srcfile.split('/')[-1]), sclimg)
         print "{} directory is converted to PNG.".format(label)
         for lfile in lfilelists[label]:

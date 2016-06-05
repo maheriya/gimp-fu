@@ -493,18 +493,18 @@ class ImageAugmentor:
                     # Empty selection -- can happen if the NP or BB moved out of the image range due to transformation. Also for catchall image class
                     #print 'Bounding box for label {l} {t} for img {i} not found. Skipping the {t} update silently'.format(l=lbl, t=ltype.upper(), i=str(img))
                     continue # skip further operation
+                (x1,y1,x2,y2) = bbox[1:]
+                w  = x2 - x1
+                h  = y2 - y1
+                xc = x1 + w/2
+                yc = y1 + h/2
                 if ltype == 'bb':
-                    ldata['BB'][lbl] = bbox[1:]
+                    ldata['BB'][lbl] = (x1,y1,x2,y2)
                 else:
-                    ldata['NP'][lbl] = (bbox[1] + (bbox[3]-bbox[1])/2, bbox[4]) # Bottom center of bb
+                    ldata['NP'][lbl] = (xc, y2) # Bottom center of bb
                 pdb.gimp_selection_none(img)
     
         self.ldata = ldata
-        #try: img.attach_new_parasite('ldata', 5, pickle.dumps(ldata))
-        #except:
-        #    msgBox('Could not save ldata parasite for image {}: {}'.format(str(img), sys.exc_info()[0]), gtk.MESSAGE_ERROR)
-        #    raise
-        #    return
 
     def appendLabelsFile(self, img, fname):
         '''
@@ -544,10 +544,12 @@ class ImageAugmentor:
             labelstr = fname
             cls = list(MLC_LBLS)
             npstr = ''
+            bbstr = ''
             for lbl in self.labels:
                 if self.labels[lbl]:
                     cls[CLS_IDS[lbl]] = 1
-                    if self.NP: ## We assume that if NP is enabled, so is BB
+                    if self.NP:   ## and BB
+                        ## Handle NP
                         # Accumulate all NP x and y coordinates
                         if len(self.nps[lbl]) == 0:
                             print 'Error! For label {l} in image {i}, could not find NP'.format(i=self.basename, l=lbl)
@@ -557,10 +559,24 @@ class ImageAugmentor:
                         x = round(x/self.img.width, 3)
                         y = round(y/self.img.height, 3)
                         npstr += ' {} {}'.format(x, y)
-                        #npstr += ' ' + ' '.join(map(lambda x:str(round(float(x)/float(self.img.width), 3)), self.nps[lbl]))
+                        ## Handle BB
+                        if len(self.nps[lbl]) == 0:
+                            print 'Error! For label {l} in image {i}, could not find NP'.format(i=self.basename, l=lbl)
+                            return False
+                        x1,y1,x2,y2 = map(float, self.bbs[lbl])
+                        w  = x2 - x1
+                        h  = y2 - y1
+                        xc = x1 + w/2.0
+                        yc = y1 + h/2.0
+                        xc = round(xc/self.img.width, 3)
+                        yc = round(yc/self.img.height, 3)
+                        w = round(w/self.img.width, 3)
+                        h = round(h/self.img.height, 3)
+                        bbstr += ' {} {} {} {}'.format(xc, yc, w, h)
             labelstr += ' ' + ' '.join(map(lambda x: str(x), cls))
-            if self.NP:
+            if self.NP: ## and BB
                 labelstr += npstr
+                labelstr += bbstr
         self.lfile.write('{}\n'.format(labelstr))
         return True
 
