@@ -70,13 +70,14 @@ This class takes a single XCF directory as input, and stores new images into tgt
 '''
 class ImageAugmentor:
 
-    def __init__(self, srcdir, tgtdir, filelist, NP, MLC, OnlyLabels):
+    def __init__(self, srcdir, tgtdir, filelist, NP, MLC, OnlyLabels, NORMALIZE_GT):
         self.srcdir = srcdir
         self.tgtdir = tgtdir
         self.filelist   = filelist
         self.NP         = NP
         self.MLC        = MLC
         self.OnlyLabels = OnlyLabels
+        self.normGT     = NORMALIZE_GT
 
     def run(self):
         # Inspite of this if-then-else, a labels.txt without NP/MLC is always saved.
@@ -125,8 +126,8 @@ class ImageAugmentor:
         self.labels = self.ldata['labels']
         self.layers = self.ldata['layers']
         if self.labels['catchall']:
-            self.nps = {'catchall' : (self.img.width/2, self.img.height/2), 'stair' : (), 'curb' : (), 'doorframe': () } #, 'badfloor': () }
-            self.bbs = {'catchall' : (0,0, self.img.width,self.img.height), 'stair' : (), 'curb' : (), 'doorframe': () } #, 'badfloor': () }
+            self.nps = {'catchall' : (self.img.width/2, self.img.height/2), 'stair' : (), 'curb' : (), 'doorframe': () }
+            self.bbs = {'catchall' : (0,0, self.img.width,self.img.height), 'stair' : (), 'curb' : (), 'doorframe': () }
             self.ldata['NP'] = self.nps
             self.ldata['BB'] = self.bbs
             self.img.attach_new_parasite('ldata', 5, pickle.dumps(self.ldata)) # Update the image parasites for later use 
@@ -223,13 +224,6 @@ class ImageAugmentor:
             pdb.plug_in_mblur(nimg, nimg.active_drawable, 1, 0.12, 1.1, -100, 300)
             self.saveImage(nimg, '01_blur7_mblur_rshk2')
 
-            # Radial motion blur, completely off-center, even larger shake, different direction
-            # Shiva - commenting this out as this image type is not helpful,
-            # most of the info in the image goes away - Shiva
-            #nimg = pdb.gimp_image_duplicate(self.img)
-            #pdb.gimp_image_set_active_layer(nimg, pdb.gimp_image_get_layer_by_name(nimg, 'base'))
-            #pdb.plug_in_mblur(nimg, nimg.active_drawable, 1, 0.2, 1.27, 800, -800)
-            #self.saveImage(nimg, '01_blur8_mblur_rshk3')
         except:
             msgBox('augBlur failed: {}'.format(sys.exc_info()[0]), gtk.MESSAGE_ERROR)
             raise
@@ -555,24 +549,22 @@ class ImageAugmentor:
                             print 'Error! For label {l} in image {i}, could not find NP'.format(i=self.basename, l=lbl)
                             return False
                         # Normalize x and y co-ordinate values
-                        x, y = map(float, self.nps[lbl])
-                        x = round(x/self.img.width, 3)
-                        y = round(y/self.img.height, 3)
+                        x, y = self.nps[lbl]
+                        if self.normGT:
+                            x = round(float(x)/self.img.width, 3)
+                            y = round(float(y)/self.img.height, 3)
                         npstr += ' {} {}'.format(x, y)
                         ## Handle BB
                         if len(self.nps[lbl]) == 0:
                             print 'Error! For label {l} in image {i}, could not find NP'.format(i=self.basename, l=lbl)
                             return False
-                        x1,y1,x2,y2 = map(float, self.bbs[lbl])
-                        w  = x2 - x1
-                        h  = y2 - y1
-                        xc = x1 + w/2.0
-                        yc = y1 + h/2.0
-                        xc = round(xc/self.img.width, 3)
-                        yc = round(yc/self.img.height, 3)
-                        w = round(w/self.img.width, 3)
-                        h = round(h/self.img.height, 3)
-                        bbstr += ' {} {} {} {}'.format(xc, yc, w, h)
+                        x1,y1,x2,y2 = self.bbs[lbl]
+                        if normGT:
+                            x1 = round(float(x1)/self.img.width, 3)
+                            y1 = round(float(y1)/self.img.height, 3)
+                            x2 = round(float(x2)/self.img.width, 3)
+                            y2 = round(float(y2)/self.img.height, 3)
+                        bbstr += ' {} {} {} {}'.format(x1, y1, x2, y2)
             labelstr += ' ' + ' '.join(map(lambda x: str(x), cls))
             if self.NP: ## and BB
                 labelstr += npstr
@@ -621,7 +613,7 @@ class ImageAugmentor:
 
 
 
-def createAugmented(srcdir, MLC):
+def createAugmented(srcdir, MLC, NORM_GT):
     """Registered function; Creates augmented images based on original labeled set of images.
     Operates on all images in srcdir directory to create images in a parallel 'augmented' directory.
     NP : If true, saves Nearest points; if false, NPs are not saved
@@ -684,7 +676,7 @@ def createAugmented(srcdir, MLC):
         srcdir    = os.path.join(xcfdir, label)
         filelist  = filelists[label]
         print("Augmenting {} directory.".format(label))
-        aug = ImageAugmentor(srcdir, tgtdir, filelist, NP, MLC, OnlyLabels)
+        aug = ImageAugmentor(srcdir, tgtdir, filelist, NP, MLC, OnlyLabels, NORM_GT)
         if not aug.run():
             return
         print("{} directory is augmented.".format(label))
@@ -695,6 +687,7 @@ def createAugmented(srcdir, MLC):
 
 # For GUI options.
 saveMLC    = False
+normGT     = False # VOC doesn't normalize GT; change if required
 
 #
 ############################################################################
@@ -711,6 +704,7 @@ register (
     [
     ( PF_DIRNAME, "srcdir", "Source Directory Containing Labeled XCF Images:", origDir ),
     ( PF_BOOL,    "MLC",    "Save labels in Multi-Label Classification (MLC) format?", saveMLC),
+    ( PF_BOOL,    "NORM_GT", "Normalize NP and BB relative to image size?", normGT),
     ],
     [],
     createAugmented,   # Matches to name of function being defined
