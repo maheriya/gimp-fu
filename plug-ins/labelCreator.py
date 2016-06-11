@@ -16,17 +16,112 @@ import pygtk
 pygtk.require("2.0")
 import gtk
 import gtk.glade
+from gtk import gdk
+from pprint import pprint
 
 scriptpath = os.path.dirname(os.path.realpath( __file__ ))
 
 class labelCreator:
-    def __init__(self, img):
-        self.img = img
-        self.grp = pdb.gimp_image_get_layer_by_name(img, 'group')
-        pdb.gimp_image_set_active_layer(img, self.grp)
+    def __init__(self, img_or_imgdir, single=True):
+        self.single = single
+        self.classes     = ['catchall', 'stair', 'curb', 'doorframe']
+        self.classids = {}
+        self.iconTexts = {}
+        self.iconImages = {}
+        clsid = 0
+        for cls in self.classes:
+            self.classids[cls] = clsid
+            self.iconTexts[cls] = '{}_{}'.format(clsid, cls)
+            self.iconImages[cls] = 'icons/{}_{}.png'.format(clsid, cls)
+            clsid += 1
+#         self.classids = {'catchall'   : 0,
+#                          'stair'      : 1,
+#                          'curb'       : 2,
+#                          'doorframe'  : 3}
+#         self.iconTexts = {'catchall'  : '0_catchall',
+#                           'stair'     : '1_stair',
+#                           'curb'      : '2_curb',
+#                           'doorframe' : '3_doorframe'}
+#         self.iconImages = {'catchall' : 'icons/0_catchall.png',
+#                            'stair'    : 'icons/1_stair.png',
+#                            'curb'     : 'icons/2_curb.png',
+#                            'doorframe': 'icons/3_doorframe.png'}
+# 
+#         print 'classes'
+#         pprint(self.classes)
+#         print 'classids'
+#         pprint(self.classids)
+#         print 'iconTexts'
+#         pprint(self.iconTexts)
+#         print 'iconImages'
+#         pprint(self.iconImages)
 
-        ## Check image for label data. Create an imaage layer for each label found
-        para = img.parasite_find('ldata')
+        if not self.single:
+            self.srcdir    = img_or_imgdir
+            self.srcfiles = []
+            for fname in os.listdir(self.srcdir):
+                if not fname.lower().endswith('.xcf'):
+                    continue # skip non-xcf files
+                self.srcfiles.append(fname)
+            # Find all of the xcf files in the list
+            if len(self.srcfiles) == 0:
+                self.msgBox("Source directory {} didn't contain any XCF images.".format(self.srcdir), gtk.MESSAGE_ERROR)
+                return
+            self.srcfiles.sort()
+            self.endqueue = len(self.srcfiles) - 1
+            self.index = 0
+            self.openImage()
+        else:
+            self.img = img_or_imgdir
+            self.setupSingleImage()
+
+        self.gladefile = os.path.join(scriptpath, "labelCreator.glade") 
+        self.wtree = gtk.Builder()
+        self.wtree.add_from_file(self.gladefile)
+        funcmap = {
+                "on_add_label_clicked"       : self.addLabel,
+                "on_add_bb_clicked"          : self.addBB,
+                "on_add_np_clicked"          : self.addNP,
+                "on_del_label_clicked"       : self.delLabel,
+                "on_del_bb_clicked"          : self.delBB,
+                "on_del_np_clicked"          : self.delNP,
+                "on_prev_button_clicked"     : self.prev,
+                "on_next_button_clicked"     : self.next,
+                "on_quit_button_clicked"     : self.quit,
+                "on_addLabelsWindow_destroy" : self.quit,
+        }
+        self.wtree.connect_signals(funcmap)
+
+        # # Get all the handles
+        self.win          = self.wtree.get_object("addLabelsWindow")
+        self.btn_addLabel = self.wtree.get_object("add_label")
+        self.btn_addBB    = self.wtree.get_object("add_bb")
+        self.btn_addNP    = self.wtree.get_object("add_np")
+        self.btn_delLabel = self.wtree.get_object("del_label")
+        # new
+        self.btn_prev     = self.wtree.get_object("prev_button")
+        self.btn_next     = self.wtree.get_object("next_button")
+        self.btn_delNP    = self.wtree.get_object("del_np")
+        self.btn_delBB    = self.wtree.get_object("del_bb")
+        #
+        self.bx_np_bb_add = self.wtree.get_object("bx_np_bb_add")
+        self.bx_np_bb_del = self.wtree.get_object("bx_np_bb_del")
+        self.initIconView(self.wtree)
+        self.win.show_all()
+        ## Hide next/prev in single image mode
+        if self.single:
+            self.btn_prev.hide()
+            self.btn_next.hide()
+
+        self.updateLayout()
+        gtk.main()
+
+    def setupSingleImage(self):
+        self.grp = pdb.gimp_image_get_layer_by_name(self.img, 'group')
+        pdb.gimp_image_set_active_layer(self.img, self.grp)
+
+        # # Check image for label data. Create an image layer for each label found
+        para = self.img.parasite_find('ldata')
         if para:
             self.ldata = pickle.loads(para.data)
             self.labels = self.ldata['labels']
@@ -36,110 +131,134 @@ class labelCreator:
             self.layers = {'catchall' : False, 'stair' : False, 'curb' : False, 'doorframe': False }
             self.ldata = {'labels': self.labels, 'layers': self.layers}
 
-        self.nps = {'catchall' : (), 'stair' : (), 'curb' : (), 'doorframe': () }
-        self.bbs = {'catchall' : (), 'stair' : (), 'curb' : (), 'doorframe': () }
-        self.ldata['NP'] = self.nps
-        self.ldata['BB'] = self.bbs
-
-        self.gladefile = os.path.join(scriptpath, "labelCreator.glade") 
-        self.wtree = gtk.Builder()
-        self.wtree.add_from_file(self.gladefile)
-        funcmap = {
-                "on_cbx_labels_changed"      : self.labelChanged,
-                "on_add_label_clicked"       : self.addLabel,
-                "on_add_bb_clicked"          : self.addBB,
-                "on_add_np_clicked"          : self.addNP,
-                "on_delete_label_clicked"    : self.delLabel,
-                "on_quit_button_clicked"     : self.quit,
-                "on_addLabelsWindow_destroy" : self.quit,
-                "on_rbtn_np_toggled"         : self.rbToggled,
-        }
-        self.wtree.connect_signals(funcmap)
-
-        ## Get all the handles
-        self.win = self.wtree.get_object("addLabelsWindow")
-        self.btn_addLabel = self.wtree.get_object("add_label")
-        self.btn_addBB    = self.wtree.get_object("add_bb")
-        self.btn_addNP    = self.wtree.get_object("add_np")
-        self.btn_delLabel = self.wtree.get_object("delete_label")
-        self.rbtn         = self.wtree.get_object("rbtn_np")
-        self.win.show_all()
-
-        self.npsel = True
-        ## Hide all the buttons (only combobox active)
-        self.enableBBNP = False
-        self.btn_addNP.unmap()
-        self.btn_addBB.unmap()
-
-        self.btn_addLabel.unmap()
-        self.btn_delLabel.unmap()
-
-        self.rbtn.set_active(True)  # Enable NP by default
-
-        gtk.main()
-
-            
-    def rbToggled(self, widget):
-        if self.rbtn.get_active():
-            self.npsel = True
+        print 'ldata:'
+        pprint(self.ldata)
+        if 'NP' in self.ldata:
+            self.nps = self.ldata['NP']
         else:
-            self.npsel = False
-        self.showButtonsBBNP()
+            self.nps = {'catchall' : (), 'stair' : (), 'curb' : (), 'doorframe': () }
+            self.ldata['NP'] = self.nps
+        if 'BB' in self.ldata:
+            self.bbs = self.ldata['BB']
+        else:
+            self.bbs = {'catchall' : (), 'stair' : (), 'curb' : (), 'doorframe': () }
+            self.ldata['BB'] = self.bbs
+        self.lbl = ''
+        # Find first available label (if any)
+        for lbl in self.classes:
+            if self.labels[lbl]:
+                self.lbl = lbl
+                break
+
+    def updateLayout(self):
+        # This should be called immediately after opening an image and reading parasite data
+        self.updateIconView()
+        if self.lbl != '' and self.labels[self.lbl]: # Label exists
+            # Show Del label button
+            self.showButtonsBBNP()
+            self.showButtonDelLabel()
+        else:
+            # # Hide all the buttons
+            self.bx_np_bb_add.unmap()
+            self.bx_np_bb_del.unmap()
     
+            self.btn_addLabel.show()
+            self.btn_addLabel.unmap()
+            self.btn_delLabel.hide()
+
     def showButtonsBBNP(self):
-        if self.npsel:
-            self.btn_addNP.show()
-            self.btn_addNP.map()
-            if not self.enableBBNP:
-                self.btn_addNP.unmap()
-            self.btn_addBB.hide()
-        else:
-            self.btn_addBB.show()
-            self.btn_addBB.map()
-            if not self.enableBBNP:
-                self.btn_addBB.unmap()
-            self.btn_addNP.hide()
+        self.btn_delNP.set_label('Delete NPs for "{}"'.format(self.lbl))
+        self.btn_delBB.set_label('Delete BBs for "{}"'.format(self.lbl))
+        self.bx_np_bb_add.map()
+        self.bx_np_bb_del.map()
+
+    def hideButtonsBBNP(self):
+        self.bx_np_bb_add.unmap()
+        self.bx_np_bb_del.unmap()
+
+    def showButtonAddLabel(self):
+        self.btn_addLabel.set_label('Add Label "{}"'.format(self.lbl))
+        self.btn_addLabel.show()
+        self.btn_addLabel.map()
+        self.btn_delLabel.hide()
+
+    def showButtonDelLabel(self):
+        self.btn_delLabel.set_label('Delete Label "{}"'.format(self.lbl))
+        self.btn_addLabel.hide()
+        self.btn_delLabel.show()
+        self.btn_delLabel.map()
 
     def quit(self, widget):
         self.saveParasite()
+        if not self.single:
+            self.saveImage()
         try:self.win.destroy()
         except: pass
         gtk.main_quit()
 
-    def labelChanged(self, cbox):
-        '''Called when combobox selection changes
-        Task: If label exists make some visual changes: e.g., show label layer
-        If BB or NP exists, show that.'''
-        cbx_labels = cbox
-        cbx_model  = cbx_labels.get_model()
-        self.lbl   = cbx_model[cbox.get_active()][0].lower()
+    def next(self, widget):
+        if self.index>=self.endqueue:
+            self.msgBox("This is the last file. No more files in this direction.", gtk.MESSAGE_INFO)
+            return
+        self.saveImage()
+        self.index += 1
+        self.openImage()
+        self.updateLayout()
 
-        self.enableBBNP = False
+    def prev(self, widget):
+        if self.index<=0:
+            self.msgBox("This is the first file. No more files in this direction.", gtk.MESSAGE_INFO)
+            return
+        self.saveImage()
+        self.index -= 1
+        self.openImage()
+        self.updateLayout()
+
+    def openImage(self):
+        self.srcfile = os.path.join(self.srcdir, self.srcfiles[self.index])
+        print 'Opening {}'.format(self.srcfile)
+        self.img  = pdb.gimp_file_load(self.srcfile, self.srcfile)
+        self.disp = pdb.gimp_display_new(self.img)
+        self.setupSingleImage()
+        
+    def saveImage(self):
+        if len(gimp.image_list()) == 0 or self.img is None:
+            return
+        if self.img.filename is None:
+            self.msgBox('Image ({}) does not have filename embedded'.format(self.srcfile), gtk.MESSAGE_ERROR)
+        pdb.gimp_xcf_save(0, self.img, self.img.active_drawable, self.img.filename, self.img.filename)
+        pdb.gimp_image_clean_all(self.img)
+        self.img = None
+        pdb.gimp_display_delete(self.disp)
+
+
+    def labelChanged(self, lbl):
+        '''Called when iconview selection changes
+        TODO: If label exists, make some visual changes: e.g., show label layer
+        If BB or NP exists, show that.'''
+        self.lbl = lbl
+
         if self.labels[self.lbl]: # label exists
-            self.btn_addLabel.unmap()
-            self.btn_delLabel.map()
-            if self.lbl != 'catchall':
-                #self.msgBox('labelChanged: Label is not catchall ({})'.format(self.lbl), gtk.MESSAGE_INFO)
-                self.enableBBNP = True
+            self.showButtonDelLabel()
+            if self.lbl == 'catchall':
+                self.hideButtonsBBNP()
+            else:
+                self.showButtonsBBNP()
         else: # Label doesn't exist
-            self.btn_addLabel.map()
-            self.btn_delLabel.unmap()
-        self.showButtonsBBNP()
+            self.showButtonAddLabel()
+            self.hideButtonsBBNP()
 
     def addLabel(self, widget):
         '''Add the label as parasite and create a layer for it. If the label already
         exists, only layer needs to be created'''
         self.labels[self.lbl] = True
 
-        self.btn_addLabel.unmap()
-        self.btn_delLabel.map()
+        self.showButtonDelLabel()
         if self.lbl == 'catchall':
-            #self.msgBox('addLabel: Label is catchall ({})'.format(self.lbl), gtk.MESSAGE_INFO)
-            self.enableBBNP = False
+            self.hideButtonsBBNP()
         else:
-            #self.msgBox('addLabel: Label is not catchall ({})'.format(self.lbl), gtk.MESSAGE_INFO)
-            self.enableBBNP = True
-        self.showButtonsBBNP()
+            self.showButtonsBBNP()
+        
         self.saveParasite()
 
 
@@ -212,10 +331,23 @@ class labelCreator:
         if lyr: # Layer exists. delete it.
             pdb.gimp_image_remove_layer(self.img, lyr)
 
-        self.btn_delLabel.unmap()
-        self.btn_addLabel.map()
-        self.enableBBNP = False
-        self.showButtonsBBNP()
+        self.delBB(widget)
+        self.delNP(widget)
+        
+        self.showButtonAddLabel()
+        self.hideButtonsBBNP()
+
+        pdb.gimp_displays_flush()
+        self.saveParasite()
+
+    def delBB(self, widget):
+        # delete BBs of current label if they exist.
+
+        pdb.gimp_displays_flush()
+        self.saveParasite()
+
+    def delNP(self, widget):
+        # delete NPs of current label if they exist.
 
         pdb.gimp_displays_flush()
         self.saveParasite()
@@ -227,6 +359,8 @@ class labelCreator:
         msgBox.destroy()
 
     def saveParasite(self):
+        if self.img is None:
+            return
         try: self.img.attach_new_parasite('ldata', 5, pickle.dumps(self.ldata))
         except:
             pdb.gimp_message("Could not save ldata parasite") 
@@ -245,6 +379,48 @@ class labelCreator:
         pdb.gimp_item_set_visible(lyr, TRUE)
         return lyr
 
+
+    # Iconview for label/class selection
+    def initIconView(self, wtree):
+        self.store = self.create_store()
+        self.fill_store()
+        sw = wtree.get_object("labels_window")
+
+        iconView = gtk.IconView(self.store)
+        iconView.set_selection_mode(gtk.SELECTION_SINGLE)
+        iconView.set_text_column(0)
+        iconView.set_pixbuf_column(1)
+
+        iconView.connect("selection-changed", self.iconSelectionChanged)
+        sw.add(iconView)
+        iconView.grab_focus()
+        self.icon_view = iconView
+
+    def create_store(self):
+        store = gtk.ListStore(str, gtk.gdk.Pixbuf, str)
+        store.set_sort_column_id(0, gtk.SORT_ASCENDING)
+        return store
+    
+    def fill_store(self):
+        self.store.clear()
+        for lbl in self.classes:
+            icon = gtk.Image()
+            icon.set_from_file(os.path.join(scriptpath, self.iconImages[lbl]))
+            self.store.append([self.iconTexts[lbl], icon.get_pixbuf(), lbl])
+
+    def iconSelectionChanged(self, iview):
+        model = iview.get_model()
+        if len(iview.get_selected_items())>0:
+            item = iview.get_selected_items()[0][0]
+            lbl = model[item][2].lower()
+            print "Icon selection changed to {}.".format(lbl)
+            self.labelChanged(lbl)
+
+    def updateIconView(self):
+        if self.lbl == '':
+            self.icon_view.unselect_all()
+        else:
+            self.icon_view.select_path(self.classids[self.lbl])
 
 if __name__ == "__main__":
     try:

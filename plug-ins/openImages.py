@@ -21,8 +21,8 @@ srcDir = os.path.join(os.environ['HOME'], "Projects/IMAGES/dvia")
 
 scriptpath = os.path.dirname(os.path.realpath( __file__ ))
 
-sys.stderr = open(os.path.join(os.environ['HOME'], '/tmp/dviastderr.txt'), 'w')
-sys.stdout = open(os.path.join(os.environ['HOME'], '/tmp/dviastdout.txt'), 'w')
+# sys.stderr = open(os.path.join(os.environ['HOME'], '/tmp/dviastderr.txt'), 'w')
+# sys.stdout = open(os.path.join(os.environ['HOME'], '/tmp/dviastdout.txt'), 'w')
 
 SIG_OK     = -5
 SIG_CANCEL = -6
@@ -128,7 +128,7 @@ register (
     "Kiran Maheriya",         # Author
     "Kiran Maheriya",         # Copyright Holder
     "March 2016",             # Date
-    "2. Open XCF Images",         # Menu Entry
+    "2a. Open XCF Images",    # Menu Entry
     "",     # Image Type - No Image Loaded
     [
     ( PF_DIRNAME, "srcPath", "Source Directory:", srcDir ),

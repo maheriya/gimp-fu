@@ -91,7 +91,7 @@ def setRoiAndCrop():
 
     bb = pdb.gimp_selection_bounds(img)   
     if not bb[0]:
-        msgBox("Make a SQUARE selection for the RoI and call me again.", gtk.MESSAGE_INFO, 0)
+        msgBox("Mark a selection for the RoI and call me again.", gtk.MESSAGE_INFO, 0)
         return
 
     ## Check is the image is XCF. If not, quit with a warning.

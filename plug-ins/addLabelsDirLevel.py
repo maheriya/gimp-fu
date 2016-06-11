@@ -1,7 +1,7 @@
 #! /usr/bin/env python
 #
-#   File = addLayers.py
-#   Selects active image and adds layers for certain labels for DVIA CNN
+#   File = addLayersDirLevel.py
+#   Works on all XCF images in a directory for adding labels for DVIA CNN
 #
 ############################################################################
 #
@@ -16,7 +16,7 @@ pygtk.require("2.0")
 import gtk
 import gtk.glade
 from labelCreator import labelCreator
- 
+
 srcDir = os.path.join(os.environ['HOME'], "Projects/IMAGES/dvia")
 
 scriptpath = os.path.dirname(os.path.realpath( __file__ ))
@@ -30,41 +30,36 @@ def msgBox(message, type, modal):
     ret = msgBox.run()
     msgBox.destroy()
 
-def addLabels():
+def addLabelsDirLevel(srcPath):
     """Registered function; selects active image and allows user to add labels for 
     requested classes.
     """
     ###
     pdb.gimp_displays_flush()
     imgs = gimp.image_list()
-    if len(imgs) == 0:
-        msgBox("'Add Labels' tool works on an open image. Also make sure to run the 'Set RoI' tool on the image before running this tool.", gtk.MESSAGE_INFO, 0)
+    if len(imgs) != 0:
+        msgBox("Since 'Add Labels' tool works on all images in a directory, please close all open images in Gimp before running it.", gtk.MESSAGE_ERROR, 0)
         return
-    img = imgs[0]
-
-    # If class label exists, prompt user for a bounding box (and nearest point)
-    # If not, ask user to choose a label and bounding box (and nearest point)
-    pdb.gimp_message("Opening the labelCreator...")
-    labelCreator(img)
-
+    labelCreator(srcPath, single=False)
 
 #
 ############################################################################
 #
 register (
-    "addLabels",           # Name registered in Procedure Browser
-    "Add Labels to a Single Image", # Widget title
-    "Add labels to a single image for CNN classification or detection tasks", # 
+    "addLabelsDirLevel",      # Name registered in Procedure Browser
+    "Add Labels to Multiple Images", # Widget title
+    "Add labels to images for CNN classification or detection tasks. Works at direcoty level", # 
     "Kiran Maheriya",         # Author
     "Kiran Maheriya",         # Copyright Holder
-    "March 2016",             # Date
-    "b. Add Labels (Current Image)",          # Menu Entry
+    "June 2016",              # Date
+    "2b. Add Labels (Dir level)",         # Menu Entry
     "",     # Image Type - No Image Loaded
     [
+    ( PF_DIRNAME, "srcPath", "Source Directory:", srcDir ),
     ],
     [],
-    addLabels,                 # Matches to name of function being defined
-    menu = "<Image>/DVIA"  # Menu Location
+    addLabelsDirLevel,        # Matches to name of function being defined
+    menu = "<Image>/DVIA/Dir Ops (Det)"  # Menu Location
     )   # End register
 #
 main() 
