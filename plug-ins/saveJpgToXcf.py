@@ -107,7 +107,7 @@ def saveJpgToXcf(srcPath, tgtPath):
     imgid = 0
     for fname in allFileList:
         (r, ext) = os.path.splitext(fname.lower())
-        if ext == '.jpg' or ext == '.jpeg' or ext == '.png':
+        if ext == '.jpg' or ext == '.jpeg' or ext == '.png' or ext == '.gif':
             srcFileList.append(fname)
             #tgtFileList.append("{l}_{n:0>5}.xcf".format(l=label, n=imgid))
             # Not needed for object detection
@@ -122,6 +122,8 @@ def saveJpgToXcf(srcPath, tgtPath):
         srcFile = os.path.join(srcPath, srcFile)
         if srcFile.count('.png') > 0: # PNG file
             img = pdb.file_png_load(srcFile, srcFile)
+        if srcFile.count('.gif') > 0: # GIF file
+            img = pdb.file_gif_load(srcFile, srcFile)
         else: # JPEG file
             img = pdb.file_jpeg_load(srcFile, srcFile)
 

@@ -19,12 +19,20 @@ import gtk.glade
 from gtk import gdk
 from pprint import pprint
 
+from roiCreator import RoiCreator
+
 scriptpath = os.path.dirname(os.path.realpath( __file__ ))
 
-class labelCreator:
+IMG_SIZE_W = 300
+IMG_SIZE_H = 400
+USE_NP_VISUAL_GRADIENT = True  # Use gradient to visualize NP?
+USE_BB_VISUAL_BORDER   = True  # Use a border in addition to solid overlay for bounding box?
+
+class LabelCreator:
     def __init__(self, img_or_imgdir, single=True):
         self.single = single
-        self.classes     = ['catchall', 'stair', 'curb', 'doorframe']
+        self.classes     = ('catchall', 'stair', 'curb', 'doorframe')
+        self.bordercolors = {'catchall': '#ffffff', 'stair': '#b80c48', 'curb': '#09b853', 'doorframe': '#0c84b8'}
         self.classids = {}
         self.iconTexts = {}
         self.iconImages = {}
@@ -34,27 +42,6 @@ class labelCreator:
             self.iconTexts[cls] = '{}_{}'.format(clsid, cls)
             self.iconImages[cls] = 'icons/{}_{}.png'.format(clsid, cls)
             clsid += 1
-#         self.classids = {'catchall'   : 0,
-#                          'stair'      : 1,
-#                          'curb'       : 2,
-#                          'doorframe'  : 3}
-#         self.iconTexts = {'catchall'  : '0_catchall',
-#                           'stair'     : '1_stair',
-#                           'curb'      : '2_curb',
-#                           'doorframe' : '3_doorframe'}
-#         self.iconImages = {'catchall' : 'icons/0_catchall.png',
-#                            'stair'    : 'icons/1_stair.png',
-#                            'curb'     : 'icons/2_curb.png',
-#                            'doorframe': 'icons/3_doorframe.png'}
-# 
-#         print 'classes'
-#         pprint(self.classes)
-#         print 'classids'
-#         pprint(self.classids)
-#         print 'iconTexts'
-#         pprint(self.iconTexts)
-#         print 'iconImages'
-#         pprint(self.iconImages)
 
         if not self.single:
             self.srcdir    = img_or_imgdir
@@ -79,6 +66,7 @@ class labelCreator:
         self.wtree = gtk.Builder()
         self.wtree.add_from_file(self.gladefile)
         funcmap = {
+                "on_add_roi_clicked"         : self.addRoI,
                 "on_add_label_clicked"       : self.addLabel,
                 "on_add_bb_clicked"          : self.addBB,
                 "on_add_np_clicked"          : self.addNP,
@@ -94,6 +82,8 @@ class labelCreator:
 
         # # Get all the handles
         self.win          = self.wtree.get_object("addLabelsWindow")
+        self.bx_main      = self.wtree.get_object("box_main")
+        self.btn_addRoI   = self.wtree.get_object("add_roi")
         self.btn_addLabel = self.wtree.get_object("add_label")
         self.btn_addBB    = self.wtree.get_object("add_bb")
         self.btn_addNP    = self.wtree.get_object("add_np")
@@ -116,10 +106,24 @@ class labelCreator:
         self.updateLayout()
         gtk.main()
 
+    def addRoI(self, widget):
+        bb = pdb.gimp_selection_bounds(self.img)
+        if not bb[0]:
+            self.msgBox("Mark a selection for the RoI and call me again.", gtk.MESSAGE_ERROR)
+            return
+        roi = RoiCreator(self.img, IMG_SIZE_W, IMG_SIZE_H, torgb=True)
+        roi.doit()
+        self.setupSingleImage()
+        self.updateLayout()
+
     def setupSingleImage(self):
         self.grp = pdb.gimp_image_get_layer_by_name(self.img, 'group')
         pdb.gimp_image_set_active_layer(self.img, self.grp)
-
+        ch = pdb.gimp_image_get_channel_by_name(self.img, 'RoI')
+        if ch is not None:
+            self.hasRoI = True
+        else:
+            self.hasRoI = False
         # # Check image for label data. Create an image layer for each label found
         para = self.img.parasite_find('ldata')
         if para:
@@ -151,6 +155,13 @@ class labelCreator:
                 break
 
     def updateLayout(self):
+        if not self.hasRoI:
+            self.bx_main.unmap()
+            self.btn_addRoI.show()
+            return
+
+        self.bx_main.map()
+        self.btn_addRoI.hide()
         # This should be called immediately after opening an image and reading parasite data
         self.updateIconView()
         if self.lbl != '' and self.labels[self.lbl]: # Label exists
@@ -274,11 +285,20 @@ class labelCreator:
             return
 
         lname = self.lbl+"_bb"
-        lmode = OVERLAY_MODE
+        lmode = NORMAL_MODE # OVERLAY_MODE
         lyr = self.createLayer(lname, lmode, newlayer=True)
 
-        pdb.gimp_context_set_background('#202020')
-        pdb.gimp_edit_bucket_fill(self.img.active_drawable, BG_BUCKET_FILL, NORMAL_MODE, 100, 0, FALSE, 0, 0)
+        # Create a solid gray box: required to make sure some part of BB remains visible during augmentation
+        pdb.gimp_context_set_background('#606060')
+        pdb.gimp_edit_bucket_fill(lyr, BG_BUCKET_FILL, NORMAL_MODE, 50, 0, FALSE, 0, 0)
+        #pdb.gimp_edit_bucket_fill(lyr, BG_BUCKET_FILL, NORMAL_MODE, 80, 0, FALSE, 0, 0)
+        if USE_BB_VISUAL_BORDER:
+            # Add border
+            pdb.gimp_selection_shrink(self.img, 1)
+            pdb.gimp_selection_border(self.img, 1)
+            pdb.gimp_selection_grow(self.img, 1)
+            gimp.set_foreground(self.bordercolors[self.lbl])
+            pdb.gimp_edit_bucket_fill(lyr, FG_BUCKET_FILL, NORMAL_MODE, 70, 0, FALSE, 0, 0)
 
         pdb.gimp_image_select_item(self.img, CHANNEL_OP_REPLACE, lyr)
         # Get new bounding box
@@ -305,14 +325,28 @@ class labelCreator:
         lyr = self.createLayer(lname, lmode, newlayer=True)
 
         bb = bb[1:]
+        x1,y1, x2,y2 = bb
         # Find the bottom-center of the bounding box
-        x = bb[0] + (bb[2]-bb[0])/2
-        y = bb[3]
-        self.nps[self.lbl] = (x, y)
-        gimp.set_foreground('#ffffff')
-        #pdb.gimp_image_select_rectangle(self.img, CHANNEL_OP_REPLACE, x-5, y-10, 10, 10)
-        pdb.gimp_image_select_ellipse  (self.img, CHANNEL_OP_REPLACE, x-5, y-10, 10, 10)
-        pdb.gimp_edit_bucket_fill(self.img.active_drawable, FG_BUCKET_FILL, NORMAL_MODE, 100, 0, FALSE, 0, 0)
+        xc = x1 + (x2-x1)/2
+        self.nps[self.lbl] = (xc, y2)
+        
+        pdb.gimp_image_select_ellipse(self.img, CHANNEL_OP_REPLACE, xc-5, y2-11, 11, 11)
+        # Select again for accuracy
+        bb = pdb.gimp_selection_bounds(self.img)
+        x1,y1, x2,y2 = bb[1:]
+        # Find the bottom-center of the bounding box
+        xc = x1 + (x2-x1)/2
+        yc = y1 + (y2-y1)/2
+        gimp.set_background('#ffffff')
+        if USE_NP_VISUAL_GRADIENT:
+            ## Gradient fill to create a distinct cone:
+            gimp.set_foreground(self.bordercolors[self.lbl])
+            pdb.gimp_context_set_gradient('FG to BG (RGB)') # 'Caribbean Blues'
+            pdb.gimp_edit_blend(lyr, CUSTOM_MODE, NORMAL_MODE, GRADIENT_CONICAL_SYMMETRIC, 
+                                100, 1, REPEAT_NONE, FALSE, FALSE, 1, 0.0, FALSE, xc,yc,xc,y2)
+        else:
+            ## Simple flat bucket fill
+            pdb.gimp_edit_bucket_fill(lyr, BG_BUCKET_FILL, NORMAL_MODE, 100, 0, FALSE, 0, 0)
 
         pdb.gimp_selection_none(self.img)
         pdb.gimp_displays_flush()
@@ -413,7 +447,7 @@ class labelCreator:
         if len(iview.get_selected_items())>0:
             item = iview.get_selected_items()[0][0]
             lbl = model[item][2].lower()
-            print "Icon selection changed to {}.".format(lbl)
+            #print "Icon selection changed to {}.".format(lbl)
             self.labelChanged(lbl)
 
     def updateIconView(self):
@@ -422,8 +456,5 @@ class labelCreator:
         else:
             self.icon_view.select_path(self.classids[self.lbl])
 
-if __name__ == "__main__":
-    try:
-        a = labelCreator(None)
-    except KeyboardInterrupt:
-        pass
+
+#EOF

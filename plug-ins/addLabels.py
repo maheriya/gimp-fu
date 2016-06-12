@@ -6,29 +6,19 @@
 ############################################################################
 #
 from gimpfu import *
-import os
-import sys
-import re
-#from time import sleep
-
 import pygtk
 pygtk.require("2.0")
 import gtk
-import gtk.glade
-from labelCreator import labelCreator
+from labelCreator import LabelCreator
  
-srcDir = os.path.join(os.environ['HOME'], "Projects/IMAGES/dvia")
-
-scriptpath = os.path.dirname(os.path.realpath( __file__ ))
-
-def msgBox(message, type, modal):
+def msgBox(message, typ, modal):
     if modal == 0:
         flag = gtk.DIALOG_DESTROY_WITH_PARENT
     else:
         flag = gtk.DIALOG_MODAL|gtk.DIALOG_DESTROY_WITH_PARENT
-    msgBox = gtk.MessageDialog(None, flag, type, gtk.BUTTONS_OK, message)
-    ret = msgBox.run()
-    msgBox.destroy()
+    mBox = gtk.MessageDialog(None, flag, typ, gtk.BUTTONS_OK, message)
+    mBox.run()
+    mBox.destroy()
 
 def addLabels():
     """Registered function; selects active image and allows user to add labels for 
@@ -42,10 +32,7 @@ def addLabels():
         return
     img = imgs[0]
 
-    # If class label exists, prompt user for a bounding box (and nearest point)
-    # If not, ask user to choose a label and bounding box (and nearest point)
-    pdb.gimp_message("Opening the labelCreator...")
-    labelCreator(img)
+    LabelCreator(img)
 
 
 #

@@ -7,28 +7,22 @@
 #
 from gimpfu import *
 import os
-import sys
-import re
-#from time import sleep
 
 import pygtk
 pygtk.require("2.0")
 import gtk
-import gtk.glade
-from labelCreator import labelCreator
+from labelCreator import LabelCreator
 
 srcDir = os.path.join(os.environ['HOME'], "Projects/IMAGES/dvia")
 
-scriptpath = os.path.dirname(os.path.realpath( __file__ ))
-
-def msgBox(message, type, modal):
+def msgBox(message, typ, modal):
     if modal == 0:
         flag = gtk.DIALOG_DESTROY_WITH_PARENT
     else:
         flag = gtk.DIALOG_MODAL|gtk.DIALOG_DESTROY_WITH_PARENT
-    msgBox = gtk.MessageDialog(None, flag, type, gtk.BUTTONS_OK, message)
-    ret = msgBox.run()
-    msgBox.destroy()
+    mBox = gtk.MessageDialog(None, flag, typ, gtk.BUTTONS_OK, message)
+    mBox.run()
+    mBox.destroy()
 
 def addLabelsDirLevel(srcPath):
     """Registered function; selects active image and allows user to add labels for 
@@ -40,7 +34,7 @@ def addLabelsDirLevel(srcPath):
     if len(imgs) != 0:
         msgBox("Since 'Add Labels' tool works on all images in a directory, please close all open images in Gimp before running it.", gtk.MESSAGE_ERROR, 0)
         return
-    labelCreator(srcPath, single=False)
+    LabelCreator(srcPath, single=False)
 
 #
 ############################################################################
@@ -52,7 +46,7 @@ register (
     "Kiran Maheriya",         # Author
     "Kiran Maheriya",         # Copyright Holder
     "June 2016",              # Date
-    "2b. Add Labels (Dir level)",         # Menu Entry
+    "2b. Add RoI and Labels", # Menu Entry
     "",     # Image Type - No Image Loaded
     [
     ( PF_DIRNAME, "srcPath", "Source Directory:", srcDir ),
