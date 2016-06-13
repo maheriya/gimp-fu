@@ -4,72 +4,38 @@
 #
 from gimpfu import *
 from gimpenums import *
-import os
-import re
-import pickle
-#
 import pygtk
 pygtk.require('2.0')
 import gtk
-#
+import os
+import pickle
+import dvia_common as dv
 
-def msgBox(message, type, modal):
-    if modal == 0:
-        flag = gtk.DIALOG_DESTROY_WITH_PARENT
-    else:
-        flag = gtk.DIALOG_MODAL|gtk.DIALOG_DESTROY_WITH_PARENT
-    msgBox = gtk.MessageDialog(None, flag, type, gtk.BUTTONS_OK, message)
-    ret = msgBox.run()
-    msgBox.destroy()
+IMG_SMALLER_EDGE_SIZE_MAX = 1200.0  # Clamp smaller edge of the image to this size 
 
-
-if os.name == 'posix':
-    Home = os.environ['HOME']
-elif os.name == 'nt':
-    Home = os.environ['HOMEPATH']
-xcfDir = os.path.join(Home, "Projects/IMAGES/dvia")
-jpegDir = os.path.join(Home, "Projects/IMAGES/dvia")
+xcfDir = os.path.join(dv.HOME, "Projects/IMAGES/dvia")
+jpegDir = os.path.join(dv.HOME, "Projects/IMAGES/dvia")
 
 
 def processImage(img):
-
     ## Convert to RGB if required
     if pdb.gimp_image_base_type(img) != 0:  # Not RGB
-        try:
-            pdb.gimp_image_convert_rgb(img)
-        except:
-            pass
+        try: pdb.gimp_image_convert_rgb(img)
+        except: pass
 
     pdb.gimp_image_resize_to_layers(img)
-
-    ASPECT = None
-    ## Crop if required for aspect ratio
-    if ASPECT == "640/480":
-        aspectRatio = 1.0 * img.height / img.width
-        desiredAspect = 640.0 / 480.0
-        height = img.height
-        width  = img.width
-        if (aspectRatio > (desiredAspect + 0.005)):
-            # # Too tall. Need to crop
-            height = round(1.0 * img.width * 640 / 480)
-            width  = img.width 
-        elif (aspectRatio < (desiredAspect - 0.005)):
-            # # Too wide. Need to crop.
-            height = img.height
-            width  = round(1.0 * img.height * 480 / 640)
-    elif ASPECT == "400x400":
-        ## For square images, calculation is much straightforward
-        ## We simply take the min dimension as width and height
-        height = min(img.height, img.width)
-        width  = height
-
-    if ASPECT is not None:
-        ## We retain bottom-left corner, cropping top or right edge as required
-        pdb.gimp_image_crop(img, width, height, img.width-width, img.height-height)
+    smin = min(img.height, img.width)
+    # Clamp smaller edge to 1500
+    if smin > IMG_SMALLER_EDGE_SIZE_MAX:
+        sscale = float(IMG_SMALLER_EDGE_SIZE_MAX / smin)
+        height = round(img.height*sscale)
+        width  = round(img.width*sscale)
+        pdb.gimp_context_set_interpolation(INTERPOLATION_LANCZOS)
+        pdb.gimp_image_scale(img, width, height)
 
 
 def saveJpgToXcf(srcPath, tgtPath):
-    """Registered function; Converts all of the jpeg/png images in the source
+    """Registered function; Converts all of the jpeg/png/gif images in the source
     directory into xcf files in a target directory. Requires two arguments, 
     the paths to the source and target directories. DOES NOT require an open image.
     """
@@ -87,15 +53,13 @@ def saveJpgToXcf(srcPath, tgtPath):
     tgtFileList = []
     # Find all of the jpeg or png files in the list & make xcf file names
     if len(allFileList) == 0:
-        msgBox("Didn't find any files in the directory {}.".format(srcPath), gtk.MESSAGE_INFO, 1)
+        dv.msgBox("Didn't find any files in the directory {}.".format(srcPath), gtk.MESSAGE_INFO, 1)
         return
 
     label = srcPath.split(os.path.sep)[-1:][0]
-    #msgBox("d: {}\nLabel: {}".format(srcPath, label), gtk.MESSAGE_INFO, 1)
 
-    lbls = {'catchall' : False, 'stair' : False, 'curb' : False, 'doorframe': False} #, 'badfloor': False, 'drop': False }
-    lyrs = {'catchall' : False, 'stair' : False, 'curb' : False, 'doorframe': False} #, 'badfloor': False, 'drop': False }
-    ldata = {'labels': lbls, 'layers': lyrs}
+    lbls = dv.dvia_labels
+    ldata = dv.dvia_ldata
 
     # Write label parasite
     lbl = None
@@ -109,9 +73,7 @@ def saveJpgToXcf(srcPath, tgtPath):
         (r, ext) = os.path.splitext(fname.lower())
         if ext == '.jpg' or ext == '.jpeg' or ext == '.png' or ext == '.gif':
             srcFileList.append(fname)
-            #tgtFileList.append("{l}_{n:0>5}.xcf".format(l=label, n=imgid))
-            # Not needed for object detection
-            tgtFileList.append("{n:0>5}.xcf".format(n=imgid))
+            tgtFileList.append("{l}_{n:0>5}.xcf".format(l=label, n=imgid))
             imgid += 1
 
     # Dictionary - source & target file names
@@ -127,6 +89,8 @@ def saveJpgToXcf(srcPath, tgtPath):
         else: # JPEG file
             img = pdb.file_jpeg_load(srcFile, srcFile)
 
+        processImage(img)
+
         base = pdb.gimp_image_get_active_layer(img)
         base.name = 'base'
         ## Create a group
@@ -135,14 +99,13 @@ def saveJpgToXcf(srcPath, tgtPath):
         pdb.gimp_image_insert_layer(img, grp, None, -1) # Insert group into image
         pdb.gimp_image_reorder_item(img, base, grp, -1) # Move base layer into 'grp' group
 
-        processImage(img)
 
         img.attach_new_parasite('ldata', 5, pickle.dumps(ldata))
         drw = img.active_drawable
         # Set Flag Properties / Parasites
         pdb.gimp_xcf_save(0, img, drw, tgtFile, tgtFile)
+        #dv.msgBox("Done with {s}->{t}".format(s=srcFile, t=tgtFile), gtk.MESSAGE_INFO, 1)
         pdb.gimp_image_delete(img)
-        #msgBox("Done with {s}->{t}".format(s=srcFile, t=tgtFile), gtk.MESSAGE_INFO, 1)
 
 #
 ############################################################################

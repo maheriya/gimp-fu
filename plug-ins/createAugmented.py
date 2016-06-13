@@ -22,15 +22,16 @@
 #
 from gimpfu import *
 from gimpenums import *
+import pygtk
+pygtk.require("2.0")
+import gtk
 
 import sys, os
 from glob import glob
 import pickle
-import pygtk
 import re
+from dvia_common import *
 
-pygtk.require("2.0")
-import gtk
 
 PI = 3.14159265358979323846
 
@@ -96,6 +97,7 @@ class ImageAugmentor:
         self.lfile2  = open(os.path.join(self.tgtdir, 'labels.txt'), 'w')
 
         for srcfile in self.filelist:
+            print 'Augmenting {}'.format(srcfile)
             if not self.augment(srcfile):
                 msgBox('Could not augment DB for image {}. Exiting.'.format(srcfile), gtk.MESSAGE_ERROR)
                 return False
@@ -125,15 +127,11 @@ class ImageAugmentor:
         self.ldata = pickle.loads(para.data)
         self.labels = self.ldata['labels']
         self.layers = self.ldata['layers']
+        self.objects  = self.ldata['objects']
         if self.labels['catchall']:
-            self.nps = {'catchall' : (self.img.width/2, self.img.height/2), 'stair' : (), 'curb' : (), 'doorframe': () }
-            self.bbs = {'catchall' : (0,0, self.img.width,self.img.height), 'stair' : (), 'curb' : (), 'doorframe': () }
-            self.ldata['NP'] = self.nps
-            self.ldata['BB'] = self.bbs
-            self.img.attach_new_parasite('ldata', 5, pickle.dumps(self.ldata)) # Update the image parasites for later use 
-
-        self.nps = self.ldata['NP']
-        self.bbs = self.ldata['BB']
+            self.objects['catchall'][0]['np'] = (self.img.width/2, self.img.height/2)
+            self.objects['catchall'][0]['bb'] = (0,0, self.img.width,self.img.height)
+            self.img.attach_new_parasite('ldata', 5, pickle.dumps(self.ldata)) # Update the image parasites for later use
 
         # Augmentor routines
         if not self.augNoise():
@@ -328,16 +326,21 @@ class ImageAugmentor:
         idx  = 0
         snpx = 0
         snpy = 0
-        for lbl in self.nps:
-            if len(self.nps[lbl]) > 0:
-                idx += 1
-                (npx, npy) = self.nps[lbl]
-                snpx += npx
-                snpy += npy
+        # For each class
+        for lbl in self.objects:
+            # ... with objects
+            if len(self.objects[lbl]) > 0:
+                # ... sum up nps
+                for obj in self.objects[lbl]:
+                    idx += 1
+                    (npx, npy) = obj['np']
+                    snpx += npx
+                    snpy += npy
+        # ... to find geometric center of all nps. This gives us our center of rotation
         npx = snpx/idx
         npy = snpy/idx
 
-        # Find average of npx and npy. This gives us our center of rotation
+        # Now adjust angles depending on where the center of nps lies 
         w = self.img.width
         if (w/3 - npx) > 0:     # On the left 1/3
             # More CW rotation than CCW
@@ -418,9 +421,10 @@ class ImageAugmentor:
         used only to pan the grp layer around
         '''
         nparray = []
-        for lbl in self.nps:
-            if len(self.nps[lbl]) > 0:
-                nparray.append(self.nps[lbl])
+        for lbl in self.objects:
+            if len(self.objects[lbl]) > 0:
+                for obj in self.objects[lbl]:
+                    nparray.append(obj['np'])
         (xmax,ymax) = max(nparray)
         (xmin,ymin) = min(nparray)
 
@@ -462,62 +466,70 @@ class ImageAugmentor:
     # Utility functions
     #####################################################################################
     def updateParasites(self, img):
-        '''Goes through the layers to find new coardinates for BBs and NPs and updates
+        '''Goes through the layers to find new coordinates for BBs and NPs and updates
         parasites accordingly. If the BBs and/or NPs are not found, silently ignores that
         and keeps old coordinates in the parasites
         '''
         para   = img.parasite_find('ldata')
         ldata  = pickle.loads(para.data)
         labels = ldata['labels']
-        
+        objects = ldata['objects']
+
         for lbl in labels:
             if not labels[lbl]:
                 continue
             # At this point, we know that label lbl exists
             for ltype in ('bb', 'np'):
-                lname = "{}_{}".format(lbl,ltype)
-                lyr   = pdb.gimp_image_get_layer_by_name(img, lname)
-                if not lyr: # Found layer
-                    print 'Layer {} for img {} not found. Skipping the layer silently'.format(lname, str(img))
-                    continue
-                pdb.gimp_image_select_item(img, CHANNEL_OP_REPLACE, lyr)
-                # Get new selection bounding box 
-                bbox = pdb.gimp_selection_bounds(img)
-                if bbox[0] == 0:
-                    # Empty selection -- can happen if the NP or BB moved out of the image range due to transformation. Also for catchall image class
-                    #print 'Bounding box for label {l} {t} for img {i} not found. Skipping the {t} update silently'.format(l=lbl, t=ltype.upper(), i=str(img))
-                    continue # skip further operation
-                (x1,y1,x2,y2) = bbox[1:]
-                w  = x2 - x1
-                h  = y2 - y1
-                xc = x1 + w/2
-                yc = y1 + h/2
-                if ltype == 'bb':
-                    ldata['BB'][lbl] = (x1,y1,x2,y2)
-                else:
-                    ldata['NP'][lbl] = (xc, y2) # Bottom center of bb
-                pdb.gimp_selection_none(img)
+                for obj in objects[lbl]:
+                    lname = obj[ltype+'Layer']
+                    lyr   = pdb.gimp_image_get_layer_by_name(img, lname)
+                    if not lyr: # Found layer
+                        print 'Layer {} for img {} not found. Skipping the layer silently'.format(lname, str(img))
+                        continue
+                    pdb.gimp_image_select_item(img, CHANNEL_OP_REPLACE, lyr)
+                    # Get new selection bounding box 
+                    bbox = pdb.gimp_selection_bounds(img)
+                    if bbox[0] == 0:
+                        # Empty selection -- can happen if the NP or BB moved out of the image range due to transformation. Also for catchall image class
+                        #print 'Bounding box for label {l} {t} for img {i} not found. Skipping the {t} update silently'.format(l=lbl, t=ltype.upper(), i=str(img))
+                        continue # skip further operation
+                    (x1,y1,x2,y2) = bbox[1:]
+                    w  = x2 - x1
+                    h  = y2 - y1
+                    xc = x1 + w/2
+                    yc = y1 + h/2
+                    if ltype == 'bb':
+                        obj['bb'] = (x1,y1,x2,y2)
+                    else:
+                        obj['np'] = (xc, y2) # Bottom center of bb
+                    pdb.gimp_selection_none(img)
     
-        self.ldata = ldata
+        #self.ldata = ldata
+        return ldata
 
-    def appendLabelsFile(self, img, fname):
+    def appendLabelsFile(self, img, fname, ldata):
         '''
         Extract parasites to update labels file and save image
         '''
         #para = img.parasite_find('ldata')
         #self.ldata = pickle.loads(para.data)
-        self.labels = self.ldata['labels']
-        self.layers = self.ldata['layers']
-        self.nps = self.ldata['NP']
-        self.bbs = self.ldata['BB']
+        labels = ldata['labels']
+        layers = ldata['layers']
+        objects = ldata['objects']
+        
 
         nplbl = None
         ymax  = 0
-        for lbl in self.nps:
-            if len(self.nps[lbl]) > 0:
-                if self.nps[lbl][1] >= ymax:
+        # For MC (multi-class classification), only one class is exclusively put in labels file
+        # We find the NP closes to the bottom of the image -- potentially, closes to camera
+        for lbl in labels:
+            if not labels[lbl]:
+                continue
+            for obj in objects[lbl]:
+                if obj['np'][1] >= ymax:
                     nplbl = lbl
-                    ymax = self.nps[lbl][1]
+                    ymax = obj['np'][1]
+                    found_obj = obj
 
         # If nplbl is still None, that means we didn't find any NP. Image didn't have an NP.
         if nplbl is None:
@@ -526,11 +538,11 @@ class ImageAugmentor:
 
         labelstr = '{} {}'.format(fname, CLS_IDS[nplbl])
         self.lfile2.write('{}\n'.format(labelstr))
-        if not self.MLC: # Need to save label for one class and one NP
+        if not self.MLC: # MC: Need to save label for one class and one NP
             if self.NP:
                 # Add NP x and y coordinates
                 # Normalize x and y co-ordinate values
-                x, y = map(float, self.nps[nplbl])
+                x, y = map(float, found_obj['np'])
                 x = round(x/self.img.width, 3)
                 y = round(y/self.img.height, 3)
                 labelstr += ' {} {}'.format(x, y)
@@ -543,28 +555,29 @@ class ImageAugmentor:
                 if self.labels[lbl]:
                     cls[CLS_IDS[lbl]] = 1
                     if self.NP:   ## and BB
-                        ## Handle NP
-                        # Accumulate all NP x and y coordinates
-                        if len(self.nps[lbl]) == 0:
-                            print 'Error! For label {l} in image {i}, could not find NP'.format(i=self.basename, l=lbl)
-                            return False
-                        # Normalize x and y co-ordinate values
-                        x, y = self.nps[lbl]
-                        if self.normGT:
-                            x = round(float(x)/self.img.width, 3)
-                            y = round(float(y)/self.img.height, 3)
-                        npstr += ' {} {}'.format(x, y)
-                        ## Handle BB
-                        if len(self.nps[lbl]) == 0:
-                            print 'Error! For label {l} in image {i}, could not find NP'.format(i=self.basename, l=lbl)
-                            return False
-                        x1,y1,x2,y2 = self.bbs[lbl]
-                        if normGT:
-                            x1 = round(float(x1)/self.img.width, 3)
-                            y1 = round(float(y1)/self.img.height, 3)
-                            x2 = round(float(x2)/self.img.width, 3)
-                            y2 = round(float(y2)/self.img.height, 3)
-                        bbstr += ' {} {} {} {}'.format(x1, y1, x2, y2)
+                        for obj in objects[lbl]:
+                            ## Handle NP
+                            # Accumulate all NP x and y coordinates
+                            if len(obj['np']) == 0:
+                                print 'Error! For label {l} in image {i}, could not find NP'.format(i=self.basename, l=lbl)
+                                return False
+                            # Normalize x and y co-ordinate values
+                            x, y = obj['np']
+                            if self.normGT:
+                                x = round(float(x)/self.img.width, 3)
+                                y = round(float(y)/self.img.height, 3)
+                            npstr += ' {} {}'.format(x, y)
+                            ## Handle BB
+                            if len(obj['bb']) == 0:
+                                print 'Error! For label {l} in image {i}, could not find BB'.format(i=self.basename, l=lbl)
+                                return False
+                            x1,y1,x2,y2 = obj['bb']
+                            if normGT:
+                                x1 = round(float(x1)/self.img.width, 3)
+                                y1 = round(float(y1)/self.img.height, 3)
+                                x2 = round(float(x2)/self.img.width, 3)
+                                y2 = round(float(y2)/self.img.height, 3)
+                            bbstr += ' {} {} {} {}'.format(x1, y1, x2, y2)
             labelstr += ' ' + ' '.join(map(lambda x: str(x), cls))
             if self.NP: ## and BB
                 labelstr += npstr
@@ -596,8 +609,8 @@ class ImageAugmentor:
         '''
         basename = '{}_{}.png'.format(self.basename, suffix)
         fname = os.path.join(self.tgtdir, basename)
-        self.updateParasites(img)
-        if not self.appendLabelsFile(img, basename):
+        ldata = self.updateParasites(img)
+        if not self.appendLabelsFile(img, basename, ldata):
             msgBox("Error: Problem finding label data. Abort!", gtk.MESSAGE_ERROR)
             raise
 

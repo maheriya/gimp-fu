@@ -10,7 +10,7 @@
 #    layers per label. One for each instance.
 
 from gimpfu import *
-import sys, os
+import os
 import pickle
 import pygtk
 pygtk.require("2.0")
@@ -19,6 +19,7 @@ import gtk.glade
 from gtk import gdk
 from pprint import pprint
 
+from dvia_common import *
 from roiCreator import RoiCreator
 
 scriptpath = os.path.dirname(os.path.realpath( __file__ ))
@@ -31,8 +32,8 @@ USE_BB_VISUAL_BORDER   = True  # Use a border in addition to solid overlay for b
 class LabelCreator:
     def __init__(self, img_or_imgdir, single=True):
         self.single = single
-        self.classes     = ('catchall', 'stair', 'curb', 'doorframe')
-        self.bordercolors = {'catchall': '#ffffff', 'stair': '#b80c48', 'curb': '#09b853', 'doorframe': '#0c84b8'}
+        self.classes     = dvia_classes
+        self.bordercolors = dvia_bordercolors
         self.classids = {}
         self.iconTexts = {}
         self.iconImages = {}
@@ -113,6 +114,7 @@ class LabelCreator:
             return
         roi = RoiCreator(self.img, IMG_SIZE_W, IMG_SIZE_H, torgb=True)
         roi.doit()
+        self.saveImage()
         self.setupSingleImage()
         self.updateLayout()
 
@@ -131,28 +133,20 @@ class LabelCreator:
             self.labels = self.ldata['labels']
             self.layers = self.ldata['layers']
         else:
-            self.labels = {'catchall' : False, 'stair' : False, 'curb' : False, 'doorframe': False }
-            self.layers = {'catchall' : False, 'stair' : False, 'curb' : False, 'doorframe': False }
-            self.ldata = {'labels': self.labels, 'layers': self.layers}
+            self.labels = dict(dvia_labels)
+            self.layers = dict(dvia_layers)
+            self.ldata = dict(dvia_ldata)
 
-        print 'ldata:'
-        pprint(self.ldata)
-        if 'NP' in self.ldata:
-            self.nps = self.ldata['NP']
-        else:
-            self.nps = {'catchall' : (), 'stair' : (), 'curb' : (), 'doorframe': () }
-            self.ldata['NP'] = self.nps
-        if 'BB' in self.ldata:
-            self.bbs = self.ldata['BB']
-        else:
-            self.bbs = {'catchall' : (), 'stair' : (), 'curb' : (), 'doorframe': () }
-            self.ldata['BB'] = self.bbs
+        self.objects  = self.ldata['objects']
+
         self.lbl = ''
         # Find first available label (if any)
         for lbl in self.classes:
             if self.labels[lbl]:
                 self.lbl = lbl
                 break
+        #print('Objects: ')
+        #pprint(self.objects)
 
     def updateLayout(self):
         if not self.hasRoI:
@@ -200,9 +194,9 @@ class LabelCreator:
         self.btn_delLabel.map()
 
     def quit(self, widget):
-        self.saveParasite()
+        #self.saveParasite()
         if not self.single:
-            self.saveImage()
+            self.closeImage()
         try:self.win.destroy()
         except: pass
         gtk.main_quit()
@@ -211,7 +205,7 @@ class LabelCreator:
         if self.index>=self.endqueue:
             self.msgBox("This is the last file. No more files in this direction.", gtk.MESSAGE_INFO)
             return
-        self.saveImage()
+        self.closeImage()
         self.index += 1
         self.openImage()
         self.updateLayout()
@@ -220,7 +214,7 @@ class LabelCreator:
         if self.index<=0:
             self.msgBox("This is the first file. No more files in this direction.", gtk.MESSAGE_INFO)
             return
-        self.saveImage()
+        self.closeImage()
         self.index -= 1
         self.openImage()
         self.updateLayout()
@@ -232,16 +226,21 @@ class LabelCreator:
         self.disp = pdb.gimp_display_new(self.img)
         self.setupSingleImage()
         
+    def closeImage(self):
+        if len(gimp.image_list()) == 0 or self.img is None:
+            return
+        pdb.gimp_image_clean_all(self.img)
+        pdb.gimp_display_delete(self.disp)
+        self.img = None
+
     def saveImage(self):
         if len(gimp.image_list()) == 0 or self.img is None:
             return
+        self.saveParasite()
         if self.img.filename is None:
             self.msgBox('Image ({}) does not have filename embedded'.format(self.srcfile), gtk.MESSAGE_ERROR)
         pdb.gimp_xcf_save(0, self.img, self.img.active_drawable, self.img.filename, self.img.filename)
         pdb.gimp_image_clean_all(self.img)
-        self.img = None
-        pdb.gimp_display_delete(self.disp)
-
 
     def labelChanged(self, lbl):
         '''Called when iconview selection changes
@@ -270,121 +269,115 @@ class LabelCreator:
         else:
             self.showButtonsBBNP()
         
-        self.saveParasite()
+        self.saveImage()
 
 
     def addBB(self, widget):
-        '''Add a bounding polygon in the BB layer and a bounding box in the image parasite
-        based on user selection.'''
+        '''
+        Add a bounding polygon in the BB layer and a bounding box in the image parasite
+        based on user selection.
+        addBB adds an object to objects parasite (addNP doesn't)
+        '''
         if self.lbl == 'catchall' or self.lbl is None:
             self.msgBox('add BB should not be called for label "{}".'.format(self.lbl), gtk.MESSAGE_ERROR)
             return
-        bb = pdb.gimp_selection_bounds(self.img)
-        if not bb[0]:
+        bbrct = pdb.gimp_selection_bounds(self.img)
+        if not bbrct[0]:
             self.msgBox("Make a SELECTION for the bounding box (BB) and click me again.", gtk.MESSAGE_ERROR)
             return
 
-        lname = self.lbl+"_bb"
-        lmode = NORMAL_MODE # OVERLAY_MODE
-        lyr = self.createLayer(lname, lmode, newlayer=True)
-
-        # Create a solid gray box: required to make sure some part of BB remains visible during augmentation
-        pdb.gimp_context_set_background('#606060')
-        pdb.gimp_edit_bucket_fill(lyr, BG_BUCKET_FILL, NORMAL_MODE, 50, 0, FALSE, 0, 0)
-        #pdb.gimp_edit_bucket_fill(lyr, BG_BUCKET_FILL, NORMAL_MODE, 80, 0, FALSE, 0, 0)
-        if USE_BB_VISUAL_BORDER:
-            # Add border
-            pdb.gimp_selection_shrink(self.img, 1)
-            pdb.gimp_selection_border(self.img, 1)
-            pdb.gimp_selection_grow(self.img, 1)
-            gimp.set_foreground(self.bordercolors[self.lbl])
-            pdb.gimp_edit_bucket_fill(lyr, FG_BUCKET_FILL, NORMAL_MODE, 70, 0, FALSE, 0, 0)
-
-        pdb.gimp_image_select_item(self.img, CHANNEL_OP_REPLACE, lyr)
-        # Get new bounding box
-        bb = pdb.gimp_selection_bounds(self.img)
-        self.bbs[self.lbl] = bb[1:]
-        pdb.gimp_selection_none(self.img)
-        pdb.gimp_displays_flush()
-        self.saveParasite()
+        #print 'In addBB. Length of self.objects["{}"]={}'.format(self.lbl, len(self.objects[self.lbl]))
+        index = len(self.objects[self.lbl])
+        lname = "{lbl}_bb{idx:d}".format(lbl=self.lbl,idx=index)
+        #print '          Adding {}, index {}'.format(lname, index)
+        lyr  = self.createLayer(lname, NORMAL_MODE, newlayer=True)
+        bb   = createBBVisual(self.img, lyr, self.lbl, USE_BB_VISUAL_BORDER)
+        obj  = dict(dvia_object)
+        obj['bb']      = bb
+        obj['bbLayer'] = lyr.name
+        obj['index']   = index
+        self.objects[self.lbl].append(obj)
+        self.saveImage()
 
     def addNP(self, widget):
-        '''Add the nearest point based on user selection. A square is adeded in the image and NP is stored as
-        a part of the ldata parasite in the image
+        '''
+        Add the nearest point based on user selection. A shape is added in the image and NP is stored.
+        NP requires an existing BB. We search for surrounding BB to find the object in which to add the new NP.
+        This is the only robust way to allow multiple instances of BBs and NPs without user errors.
+        addBB adds an object to objects parasite (addNP doesn't)
         '''
         if self.lbl == 'catchall' or self.lbl is None:
             self.msgBox('add NP should not be called for label "{}".'.format(self.lbl), gtk.MESSAGE_ERROR)
             return
-        bb = pdb.gimp_selection_bounds(self.img)
-        if not bb[0]:
+        bbrct = pdb.gimp_selection_bounds(self.img)
+        if not bbrct[0]:
             self.msgBox("Make a SELECTION for the nearest point (NP) and click me again. Bottom-center of the selection will be the nearest point", gtk.MESSAGE_ERROR)
             return
 
-        lname = self.lbl+"_np"
-        lmode = NORMAL_MODE
-        lyr = self.createLayer(lname, lmode, newlayer=True)
-
-        bb = bb[1:]
-        x1,y1, x2,y2 = bb
+        ## Get surrounding object so that we can insert NP in it.
+        x1,y1, x2,y2 = bbrct[1:]
         # Find the bottom-center of the bounding box
         xc = x1 + (x2-x1)/2
-        self.nps[self.lbl] = (xc, y2)
-        
-        pdb.gimp_image_select_ellipse(self.img, CHANNEL_OP_REPLACE, xc-5, y2-11, 11, 11)
-        # Select again for accuracy
-        bb = pdb.gimp_selection_bounds(self.img)
-        x1,y1, x2,y2 = bb[1:]
-        # Find the bottom-center of the bounding box
-        xc = x1 + (x2-x1)/2
-        yc = y1 + (y2-y1)/2
-        gimp.set_background('#ffffff')
-        if USE_NP_VISUAL_GRADIENT:
-            ## Gradient fill to create a distinct cone:
-            gimp.set_foreground(self.bordercolors[self.lbl])
-            pdb.gimp_context_set_gradient('FG to BG (RGB)') # 'Caribbean Blues'
-            pdb.gimp_edit_blend(lyr, CUSTOM_MODE, NORMAL_MODE, GRADIENT_CONICAL_SYMMETRIC, 
-                                100, 1, REPEAT_NONE, FALSE, FALSE, 1, 0.0, FALSE, xc,yc,xc,y2)
-        else:
-            ## Simple flat bucket fill
-            pdb.gimp_edit_bucket_fill(lyr, BG_BUCKET_FILL, NORMAL_MODE, 100, 0, FALSE, 0, 0)
+        obj = self.findSurroundingObject(self.lbl, (xc, y2))
+        if obj is None:
+            self.msgBox("Couldn't find surrounding BB for this NP for label {}.".format(self.lbl), gtk.MESSAGE_ERROR)
+            return
+        #print 'In addNP. Length of self.objects["{}"]={}'.format(self.lbl, len(self.objects[self.lbl]))
+        if obj['npLayer']:
+            pdb.gimp_image_remove_layer(self.img, obj['npLayer'])
+            obj['npLayer'] = None
+        lname = "{lbl}_np{idx:d}".format(lbl=self.lbl,idx=obj['index'])
+        #print '          Adding {}, index {}'.format(lname, obj['index'])
+        lyr = self.createLayer(lname, NORMAL_MODE, newlayer=True)
 
-        pdb.gimp_selection_none(self.img)
-        pdb.gimp_displays_flush()
-        self.saveParasite()
+        np = createNPVisual(self.img, lyr, self.lbl, USE_NP_VISUAL_GRADIENT)
+        obj['np'] = np
+        obj['npLayer'] = lyr.name
+        self.saveImage()
 
     def delLabel(self, widget):
         # delete BB, NP and the label if they exist.
+        self.delBB(None)
         self.labels[self.lbl] = False
         self.layers[self.lbl] = False
-        self.nps[self.lbl] = ()
-        self.bbs[self.lbl] = ()
-        lyr = pdb.gimp_image_get_layer_by_name(self.img, self.lbl+"_np")
-        if lyr: # Layer exists. delete it.
-            pdb.gimp_image_remove_layer(self.img, lyr)
-        lyr = pdb.gimp_image_get_layer_by_name(self.img, self.lbl+"_bb")
-        if lyr: # Layer exists. delete it.
-            pdb.gimp_image_remove_layer(self.img, lyr)
-
-        self.delBB(widget)
-        self.delNP(widget)
         
         self.showButtonAddLabel()
         self.hideButtonsBBNP()
 
         pdb.gimp_displays_flush()
-        self.saveParasite()
+        self.saveImage()
 
     def delBB(self, widget):
-        # delete BBs of current label if they exist.
+        # delete BBs of _current_ label if they exist.
+        #print 'In delBB. Length of self.objects["{}"]={}'.format(self.lbl, len(self.objects[self.lbl]))
+        for obj in self.objects[self.lbl]:
+            if obj['bbLayer']:
+                #print '   Deleting {}'.format(obj['bbLayer'])
+                lyr = pdb.gimp_image_get_layer_by_name(self.img, obj['bbLayer'])
+                if lyr: 
+                    pdb.gimp_image_remove_layer(self.img, lyr)
+                obj['bbLayer'] = None
+        # When BBs are deleted, NPs cannot exist; must be deleted as well
+        self.delNP(None)
 
+        self.objects[self.lbl] = []
         pdb.gimp_displays_flush()
-        self.saveParasite()
+        self.saveImage()
 
     def delNP(self, widget):
         # delete NPs of current label if they exist.
+        #print 'In delNP. Length of self.objects["{}"]={}'.format(self.lbl, len(self.objects[self.lbl]))
+        for obj in self.objects[self.lbl]:
+            obj['np'] = []
+            if obj['npLayer']:
+                #print '   Deleting {}'.format(obj['npLayer'])
+                lyr = pdb.gimp_image_get_layer_by_name(self.img, obj['npLayer'])
+                if lyr:
+                    pdb.gimp_image_remove_layer(self.img, lyr)
+                obj['npLayer'] = None
 
         pdb.gimp_displays_flush()
-        self.saveParasite()
+        self.saveImage()
 
     def msgBox(self, msg, btype):
         flag = gtk.DIALOG_MODAL|gtk.DIALOG_DESTROY_WITH_PARENT
@@ -412,6 +405,26 @@ class LabelCreator:
         pdb.gimp_image_set_active_layer(self.img, lyr)
         pdb.gimp_item_set_visible(lyr, TRUE)
         return lyr
+
+    def findSurroundingObject(self, lbl, np):
+        '''
+        For a given lbl and bb, finds surrounding object using BB
+        Returns pointer to object within the objects[lbl] array.
+        Returns None if obj with appropriate BB is not found.
+        '''
+        npx,npy = np
+        if len(self.objects[lbl])==0:
+            print "  There are no objects created for for this label. Returning None."
+            return None
+        for iobj in xrange(len(self.objects[lbl])):
+            obj = self.objects[lbl][iobj]
+            if len(obj['bb']) == 0:
+                print 'Found object, but there is no BB. Returning None.'
+                return None 
+            x1,y1,x2,y2 = obj['bb']
+            if (x1 <= npx and npx <= x2) and (y1 <= npy and npy <= y2):
+                return obj
+        return None
 
 
     # Iconview for label/class selection

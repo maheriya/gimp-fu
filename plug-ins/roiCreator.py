@@ -52,6 +52,7 @@ class RoiCreator:
             else:                 # Taller selection. Scale down taller dimension --  the height
                 nh   = int(float(roi_w)*ASPECT)
         #print("Crop stats: X:{x}, Y:{y}, W:{w}, H:{h}, new aspect:{a}".format(x=roi_x, y=roi_y, w=nw, h=nh, a=float(nw)/float(nh)))
+        pdb.gimp_context_set_interpolation(INTERPOLATION_LANCZOS)
         pdb.gimp_image_resize(self.img, nw, nh, -roi_x, -roi_y)
     
         # Now scale the image down to have max of IMG_SIZE_W/H dimension (images smaller than this are left untouched)
