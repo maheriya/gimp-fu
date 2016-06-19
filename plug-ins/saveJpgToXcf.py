@@ -25,13 +25,16 @@ def processImage(img):
 
     pdb.gimp_image_resize_to_layers(img)
     smin = min(img.height, img.width)
-    # Clamp smaller edge to 1500
+    # Clamp smaller edge to specific max size
     if smin > IMG_SMALLER_EDGE_SIZE_MAX:
         sscale = float(IMG_SMALLER_EDGE_SIZE_MAX / smin)
         height = round(img.height*sscale)
         width  = round(img.width*sscale)
         pdb.gimp_context_set_interpolation(INTERPOLATION_LANCZOS)
-        pdb.gimp_image_scale(img, width, height)
+        try:
+            pdb.gimp_image_scale(img, width, height)
+        except: 
+            print 'Error scaling image {}'.format(img.name)
 
 
 def saveJpgToXcf(srcPath, tgtPath):

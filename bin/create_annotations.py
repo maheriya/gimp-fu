@@ -64,9 +64,7 @@ def createAnnotations(labels_file, width, height):
     """
     CLS_IDS     = {'stair' : 0, 'curb' : 1, 'doorframe': 2}
     CLASSES     = ['stair', 'curb', 'doorframe']
-    MLC_LBLS    = [0, 0, 0]
-    nps = {'stair' : (), 'curb' : (), 'doorframe': () }
-    bbs = {'stair' : (), 'curb' : (), 'doorframe': () }
+    MLC_LBLS    = []
 
     pngdir    = os.path.dirname(labels_file)
     png       = pngdir.split('/')[-1]
@@ -92,12 +90,14 @@ def createAnnotations(labels_file, width, height):
         annots = words[4:]
         #print 'img = {},\nstair = {}, curb = {}, door = {} (MLC:{}),\nannots = {}'.format(img, stair, curb, door, MLC_LBLS, annots)
         # Get NPs
-        for i in range(0,3):
+        nps = {'stair' : (), 'curb' : (), 'doorframe': () }
+        bbs = {'stair' : (), 'curb' : (), 'doorframe': () }
+        for i in xrange(len(MLC_LBLS)):
             if MLC_LBLS[i]:
                 nps[CLASSES[i]] = annots[0:2]
                 annots = annots[2:]
         # Get BBs
-        for i in range(0,3):
+        for i in xrange(len(MLC_LBLS)):
             if MLC_LBLS[i]:
                 bbs[CLASSES[i]] = annots[0:4]
                 annots = annots[4:]

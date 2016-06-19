@@ -11,18 +11,10 @@ import os
 import pygtk
 pygtk.require("2.0")
 import gtk
+from dvia_common import msgBox
 from labelCreator import LabelCreator
 
 srcDir = os.path.join(os.environ['HOME'], "Projects/IMAGES/dvia")
-
-def msgBox(message, typ, modal):
-    if modal == 0:
-        flag = gtk.DIALOG_DESTROY_WITH_PARENT
-    else:
-        flag = gtk.DIALOG_MODAL|gtk.DIALOG_DESTROY_WITH_PARENT
-    mBox = gtk.MessageDialog(None, flag, typ, gtk.BUTTONS_OK, message)
-    mBox.run()
-    mBox.destroy()
 
 def addLabelsDirLevel(srcPath):
     """Registered function; selects active image and allows user to add labels for 

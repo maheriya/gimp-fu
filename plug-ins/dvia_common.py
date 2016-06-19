@@ -19,22 +19,24 @@ elif os.name == 'nt':
 
 ## Empty definitions for labels, layers and NP/BB
 dvia_classes      = ('catchall', 'stair', 'curb', 'doorframe')
+dvia_cls_ids      = {'stair' : 0, 'curb' : 1, 'doorframe': 2}  ## catchall should be ignored -- this should only be used for MLC format
+
 dvia_bordercolors = {'catchall': '#ffffff', 'stair': '#b80c48', 'curb': '#09b853', 'doorframe': '#0c84b8'}
-dvia_labels  = {'catchall' : False, 'stair' : False, 'curb' : False, 'doorframe': False} #, 'badfloor': False, 'drop': False }
-dvia_layers  = {'catchall' : False, 'stair' : False, 'curb' : False, 'doorframe': False} #, 'badfloor': False, 'drop': False }
-#dvia_nps     = {'catchall' : [], 'stair' : [], 'curb' : [], 'doorframe': []}
-#dvia_bbs     = {'catchall' : [], 'stair' : [], 'curb' : [], 'doorframe': []}
+dvia_labels       = {'catchall' : False, 'stair' : False, 'curb' : False, 'doorframe': False} #, 'badfloor': False, 'drop': False }
+dvia_layers       = {'catchall' : False, 'stair' : False, 'curb' : False, 'doorframe': False} #, 'badfloor': False, 'drop': False }
+
 # Objects: Per class array of objects which are dict of arrays or nps and bbs
 dvia_objects = {'catchall' : [], 'stair' : [], 'curb' : [], 'doorframe': []}
 # Object: Each object contains one np, and one bb. Also used to store other object specific info.
 dvia_object  = {'np': (), 'bb': (), 'npLayer': None, 'bbLayer': None, 'index': None} ##, 'pose': 'front'}
 
 dvia_ldata =  {'labels': dvia_labels, 'layers': dvia_layers, 'objects': dvia_objects}
-#dvia_ldata['NP'] = dvia_nps
-#dvia_ldata['BB'] = dvia_bbs
+
+
+
 
 ## Common function definitions
-def msgBox(message, typ, modal):
+def msgBox(message, typ=gtk.MESSAGE_INFO, modal=1):
     if modal == 0:
         flag = gtk.DIALOG_DESTROY_WITH_PARENT
     else:
@@ -42,6 +44,15 @@ def msgBox(message, typ, modal):
     mBox = gtk.MessageDialog(None, flag, typ, gtk.BUTTONS_OK, message)
     mBox.run()
     mBox.destroy()
+
+def questionBox(msg):
+    btype=gtk.MESSAGE_QUESTION
+    flag = gtk.DIALOG_DESTROY_WITH_PARENT
+    msgBox = gtk.MessageDialog(None, flag, btype, gtk.BUTTONS_YES_NO, msg)
+    resp = msgBox.run()
+    msgBox.destroy()
+    return resp
+
 
 def createBBVisual(img, lyr, lbl, make_border=True):
     # Based on input bb, creates a color-coded bounding box visual in the img for label lbl

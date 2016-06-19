@@ -41,8 +41,8 @@ def openLabels(labels_file):
     while(cval<nval):
         random_index = random.randrange(0, (len(labels)-1))
         # Handle augmented images: Once an image is selected, select all related augmented images too.
-        #imgindex = labels[random_index].split('_')[0:3]  ## For names containing id_class (e.g. 0_catchall_00000_09_pan2.png)
-        imgindex = labels[random_index].split('_')[0:1]   ## For names not containing id_class (e.g., 00007_09_pan2.png)
+        imgindex = labels[random_index].split('_')[0:3]  ## For names containing id_class (e.g. 0_catchall_00000_09_pan2.png)
+        #imgindex = labels[random_index].split('_')[0:1]   ## For names not containing id_class (e.g., 00007_09_pan2.png)
         imgindex = '_'.join(imgindex)
         print 'Selected for val: {}'.format(imgindex)
 

@@ -23,14 +23,17 @@
 from gimpfu import *
 from gimpenums import *
 import pygtk
+import XmlAnnotator
 pygtk.require("2.0")
 import gtk
 
 import sys, os
+from shutil import rmtree
 from glob import glob
 import pickle
 import re
 from dvia_common import *
+from XmlAnnotator import XmlAnnotator
 
 
 PI = 3.14159265358979323846
@@ -38,78 +41,59 @@ PI = 3.14159265358979323846
 # Constants used by the script
 PNG_WIDTH   = 300
 PNG_HEIGHT  = 400
-CLS_IDS     = {'stair' : 0, 'curb' : 1, 'doorframe': 2}  ## catchall should be ignored
-CLASSES     = ['stair', 'curb', 'doorframe']             ## ditto
-MLC_LBLS    = [0, 0, 0] ## no place for catchall: All zeros mean full catchall/background patch
-LABELFILE   = 'labels'
+LABELFILE   = 'labels.txt'
 
 
 #
 origDir = os.path.join(os.environ['HOME'], "Projects/IMAGES/dvia/xcf")
 
-def msgBox(msg, btype=gtk.MESSAGE_INFO):
-    flag = gtk.DIALOG_MODAL|gtk.DIALOG_DESTROY_WITH_PARENT
-    msgBox = gtk.MessageDialog(None, flag, btype, gtk.BUTTONS_OK, msg)
-    msgBox.run()
-    msgBox.destroy()
-
-def questionBox(msg):
-    btype=gtk.MESSAGE_QUESTION
-    flag = gtk.DIALOG_DESTROY_WITH_PARENT
-    msgBox = gtk.MessageDialog(None, flag, btype, gtk.BUTTONS_YES_NO, msg)
-    resp = msgBox.run()
-    msgBox.destroy()
-    return resp
-
-def mymsg(msg):
-    #print msg
-    pass
-
-
 '''
 This class takes a single XCF directory as input, and stores new images into tgtdir
+Also creates labels.txt and XML annotations.
 '''
 class ImageAugmentor:
 
-    def __init__(self, srcdir, tgtdir, filelist, NP, MLC, OnlyLabels, NORMALIZE_GT):
-        self.srcdir = srcdir
-        self.tgtdir = tgtdir
+    def __init__(self, srcdir, tgtdir, tgtAnndir, filelist, OnlyCheckParasites):
+        self.srcdir     = srcdir
+        self.tgtdir     = tgtdir
+        self.tgtAnndir  = tgtAnndir
+        #
         self.filelist   = filelist
-        self.NP         = NP
-        self.MLC        = MLC
-        self.OnlyLabels = OnlyLabels
-        self.normGT     = NORMALIZE_GT
+        self.OnlyCheckParasites = OnlyCheckParasites
 
     def run(self):
-        # Inspite of this if-then-else, a labels.txt without NP/MLC is always saved.
-        if self.NP:
-            if self.MLC:
-                LABELFILE = 'labels_NP_MLC'
-            else:
-                LABELFILE = 'labels_NP'
-        else:
-            if self.MLC:
-                LABELFILE = 'labels_MLC'
-            else:
-                LABELFILE = 'labels'
-        LABELFILE += '.txt'
-        self.lfile   = open(os.path.join(self.tgtdir, LABELFILE), 'w')
-        self.lfile2  = open(os.path.join(self.tgtdir, 'labels.txt'), 'w')
-
+        status = True
+        if not self.OnlyCheckParasites:
+            self.lfile  = open(os.path.join(self.tgtdir, LABELFILE), 'w')
         for srcfile in self.filelist:
-            print 'Augmenting {}'.format(srcfile)
+            basefilename = srcfile.split('/')[-1]
+            self.basename = '.'.join(basefilename.split('.')[:-1]) ## Remove extension
+
+            if self.OnlyCheckParasites:
+                print('Checking {}'.format(basefilename))
+            else:
+                print('Augmenting {}'.format(basefilename))
+            ## Run the main routine
             if not self.augment(srcfile):
-                msgBox('Could not augment DB for image {}. Exiting.'.format(srcfile), gtk.MESSAGE_ERROR)
-                return False
-        self.lfile.close()
-        self.lfile2.close()
-        return True
+                status = False
+                if self.OnlyCheckParasites:
+                    print('Error! {} had issues with parasite data'.format(basefilename))
+                else:
+                    msgBox('Could not augment DB for image {}. Exiting.'.format(basefilename), gtk.MESSAGE_ERROR)
+                    break
+
+        if not self.OnlyCheckParasites:
+            self.lfile.close()
+            if status==False:
+                # Clean up
+                os.unlink(os.path.join(self.tgtdir, LABELFILE))
+                if os.path.exists(self.tgtdir) and len(os.listdir(self.tgtdir))==0:
+                    os.rmdir(self.tgtdir)
+        return status
 
     def augment(self, filename):
         '''This function should be called for each image.
         '''
-        basefilename = filename.split('/')[-1]
-        self.basename = '.'.join(basefilename.split('.')[:-1]) ## Remove extension
         srcfilepath = filename # os.path.join(self.srcdir, filename)
 
         # Original img with all layers
@@ -133,6 +117,13 @@ class ImageAugmentor:
             self.objects['catchall'][0]['bb'] = (0,0, self.img.width,self.img.height)
             self.img.attach_new_parasite('ldata', 5, pickle.dumps(self.ldata)) # Update the image parasites for later use
 
+        ####
+        if self.OnlyCheckParasites:
+            status = self.checkParasites()
+            pdb.gimp_image_delete(self.img)
+            return status
+        ####
+        
         # Augmentor routines
         if not self.augNoise():
             return False
@@ -465,17 +456,56 @@ class ImageAugmentor:
     #####################################################################################
     # Utility functions
     #####################################################################################
+    def checkParasites(self):
+        '''
+        Check parasites data to ensure images have valid data
+        '''
+        labels  = self.ldata['labels']
+        objects = self.ldata['objects']
+        status  = True
+
+        # For MC (multi-class classification), only one class is exclusively put in labels file
+        # We find the NP closest to the bottom of the image -- potentially closest to camera
+        nplbl = None
+        ymax  = 0
+        for lbl in dvia_classes:
+            if not labels[lbl]:
+                continue
+            for obj in objects[lbl]:
+                if len(obj['np'])>0 and obj['np'][1] >= ymax:
+                    nplbl = lbl
+                    ymax = obj['np'][1]
+        # If nplbl is still None, that means we didn't find any NP. Image didn't have an NP.
+        if nplbl is None:
+            print "\tError! NP data not found! ({})".format(self.basename)
+            status = False
+
+        for lbl in dvia_classes:
+            if labels[lbl]:
+                if len(objects[lbl])==0:
+                    print '\tError! For label {l} in image {i}, could not find any object'.format(i=self.basename, l=lbl)
+                    status = False
+                for obj in objects[lbl]: # For all objects for the current label
+                    if len(obj['np']) == 0:
+                        print '\tError! For label {l} in image {i}, could not find NP'.format(i=self.basename, l=lbl)
+                        status = False
+                    ## Handle BB
+                    if len(obj['bb']) == 0:
+                        print '\tError! For label {l} in image {i}, could not find BB'.format(i=self.basename, l=lbl)
+                        status = False
+        return status
+
     def updateParasites(self, img):
         '''Goes through the layers to find new coordinates for BBs and NPs and updates
-        parasites accordingly. If the BBs and/or NPs are not found, silently ignores that
-        and keeps old coordinates in the parasites
+        parasites accordingly. If the BBs and/or NPs shapes are not found, silently ignores
+        that and keeps old coordinates in the parasites
         '''
-        para   = img.parasite_find('ldata')
-        ldata  = pickle.loads(para.data)
-        labels = ldata['labels']
+        para    = img.parasite_find('ldata')
+        ldata   = pickle.loads(para.data)
+        labels  = ldata['labels']
         objects = ldata['objects']
 
-        for lbl in labels:
+        for lbl in dvia_classes:
             if not labels[lbl]:
                 continue
             # At this point, we know that label lbl exists
@@ -484,7 +514,7 @@ class ImageAugmentor:
                     lname = obj[ltype+'Layer']
                     lyr   = pdb.gimp_image_get_layer_by_name(img, lname)
                     if not lyr: # Found layer
-                        print 'Layer {} for img {} not found. Skipping the layer silently'.format(lname, str(img))
+                        print 'Layer {} for img {} not found. Keeping old {}.'.format(lname, img.name, ltype.upper())
                         continue
                     pdb.gimp_image_select_item(img, CHANNEL_OP_REPLACE, lyr)
                     # Get new selection bounding box 
@@ -504,95 +534,53 @@ class ImageAugmentor:
                         obj['np'] = (xc, y2) # Bottom center of bb
                     pdb.gimp_selection_none(img)
     
-        #self.ldata = ldata
         return ldata
 
     def appendLabelsFile(self, img, fname, ldata):
         '''
         Extract parasites to update labels file and save image
         '''
-        #para = img.parasite_find('ldata')
-        #self.ldata = pickle.loads(para.data)
         labels = ldata['labels']
-        layers = ldata['layers']
         objects = ldata['objects']
         
-
+        # For MC (multi-class classification), only one class is exclusively put in labels file
+        # We find the NP closest to the bottom of the image -- potentially closest to camera
         nplbl = None
         ymax  = 0
-        # For MC (multi-class classification), only one class is exclusively put in labels file
-        # We find the NP closes to the bottom of the image -- potentially, closes to camera
-        for lbl in labels:
+        for lbl in dvia_classes:
             if not labels[lbl]:
                 continue
             for obj in objects[lbl]:
-                if obj['np'][1] >= ymax:
+                if len(obj['np'])>0 and obj['np'][1] >= ymax:
                     nplbl = lbl
                     ymax = obj['np'][1]
-                    found_obj = obj
-
         # If nplbl is still None, that means we didn't find any NP. Image didn't have an NP.
         if nplbl is None:
             print "Error! NP data not found!"
             return False
 
-        labelstr = '{} {}'.format(fname, CLS_IDS[nplbl])
-        self.lfile2.write('{}\n'.format(labelstr))
-        if not self.MLC: # MC: Need to save label for one class and one NP
-            if self.NP:
-                # Add NP x and y coordinates
-                # Normalize x and y co-ordinate values
-                x, y = map(float, found_obj['np'])
-                x = round(x/self.img.width, 3)
-                y = round(y/self.img.height, 3)
-                labelstr += ' {} {}'.format(x, y)
-        else: # Need to save multi-label class format and multiple NPs
-            labelstr = fname
-            cls = list(MLC_LBLS)
-            npstr = ''
-            bbstr = ''
-            for lbl in self.labels:
-                if self.labels[lbl]:
-                    cls[CLS_IDS[lbl]] = 1
-                    if self.NP:   ## and BB
-                        for obj in objects[lbl]:
-                            ## Handle NP
-                            # Accumulate all NP x and y coordinates
-                            if len(obj['np']) == 0:
-                                print 'Error! For label {l} in image {i}, could not find NP'.format(i=self.basename, l=lbl)
-                                return False
-                            # Normalize x and y co-ordinate values
-                            x, y = obj['np']
-                            if self.normGT:
-                                x = round(float(x)/self.img.width, 3)
-                                y = round(float(y)/self.img.height, 3)
-                            npstr += ' {} {}'.format(x, y)
-                            ## Handle BB
-                            if len(obj['bb']) == 0:
-                                print 'Error! For label {l} in image {i}, could not find BB'.format(i=self.basename, l=lbl)
-                                return False
-                            x1,y1,x2,y2 = obj['bb']
-                            if normGT:
-                                x1 = round(float(x1)/self.img.width, 3)
-                                y1 = round(float(y1)/self.img.height, 3)
-                                x2 = round(float(x2)/self.img.width, 3)
-                                y2 = round(float(y2)/self.img.height, 3)
-                            bbstr += ' {} {} {} {}'.format(x1, y1, x2, y2)
-            labelstr += ' ' + ' '.join(map(lambda x: str(x), cls))
-            if self.NP: ## and BB
-                labelstr += npstr
-                labelstr += bbstr
+        labelstr = '{} {}'.format(fname, dvia_cls_ids[nplbl])
         self.lfile.write('{}\n'.format(labelstr))
+
+        xann = XmlAnnotator(self.tgtAnndir, fname, self.img.width, self.img.height)
+        # Need to save all objects to XML annotation file
+        # The XML format supports multiple classes and multiple instances of BBs/NPs per class
+        for lbl in dvia_classes:
+            if labels[lbl]:
+                if len(objects[lbl])==0:
+                    print '\tError! For label {l} in image {i}, could not find any object'.format(i=self.basename, l=lbl)
+                    return False
+                for obj in objects[lbl]: # For all objects for the current label
+                    if len(obj['np']) == 0:
+                        print 'Error! For label {l} in image {i}, could not find NP'.format(i=self.basename, l=lbl)
+                        return False
+                    if len(obj['bb']) == 0:
+                        print 'Error! For label {l} in image {i}, could not find BB'.format(i=self.basename, l=lbl)
+                        return False
+                    xann.addObject(lbl, obj)
+        ## Create XML Annotation file
+        xann.write()
         return True
-
-
-    def getImageFlatCopy(self, img):
-        limg = pdb.gimp_image_duplicate(img) # local copy of the image
-        base = pdb.gimp_image_get_layer_by_name(limg, 'base')
-        pdb.gimp_image_reorder_item(limg, base, None, -1) # Move base layer to the top; obscuring everything else...
-        nlyr = pdb.gimp_image_flatten(limg) # ... and flatten the image to remove other layers
-        nlyr.name = 'base'
-        return limg
 
     def flattenImage(self, img):
         # Move base layer to the top; obscuring everything else ...
@@ -611,12 +599,12 @@ class ImageAugmentor:
         fname = os.path.join(self.tgtdir, basename)
         ldata = self.updateParasites(img)
         if not self.appendLabelsFile(img, basename, ldata):
-            msgBox("Error: Problem finding label data. Abort!", gtk.MESSAGE_ERROR)
+            msgBox("Error: Problem finding label data for {}_{} Abort!".format(self.basename,suffix), gtk.MESSAGE_ERROR)
             raise
 
         try:
             compression = 9;
-            pdb.gimp_image_scale(img, PNG_WIDTH, PNG_HEIGHT)
+            #pdb.gimp_image_scale(img, PNG_WIDTH, PNG_HEIGHT)
             base = self.flattenImage(img)
             pdb.file_png_save(img, base, fname, fname, 0, compression, 0, 0, 0, 0, 0)
         except:
@@ -626,26 +614,29 @@ class ImageAugmentor:
 
 
 
-def createAugmented(srcdir, MLC, NORM_GT):
+def createAugmented(srcdir, onlycheckpara):
     """Registered function; Creates augmented images based on original labeled set of images.
     Operates on all images in srcdir directory to create images in a parallel 'augmented' directory.
-    NP : If true, saves Nearest points; if false, NPs are not saved
     MLC: IF true, saves all class labels; if false, only one class is saved.
     # In case of MLC=False, the class with NP closest to the bottom is selected automatically
     """
-    NP         = True
-    OnlyLabels = False
+    AllowExistingAugDir = False
 
     xcfdir    = os.path.realpath(srcdir)
     xcf       = srcdir.split('/')[-1]
     tgtAugdir = os.path.join('/'.join(xcfdir.split('/')[:-1]), 'augmented')
+    tgtAnndir = os.path.join('/'.join(xcfdir.split('/')[:-1]), 'Annotations')
 
     if xcf != 'xcf':
         msgBox("Source dir ({}) is not named 'xcf'.\nThis is a requirement as a part of the flow. Aborting!".format(xcf), gtk.MESSAGE_ERROR)
         return
 
-    if not os.path.exists(tgtAugdir):
-        os.mkdir(tgtAugdir)
+    if not onlycheckpara:
+        if not os.path.exists(tgtAugdir):
+            os.mkdir(tgtAugdir)
+        if os.path.exists(tgtAnndir):
+            rmtree(tgtAnndir)
+        os.mkdir(tgtAnndir)
 
     labels_ = os.listdir(xcfdir)
     labels_.sort()
@@ -661,46 +652,52 @@ def createAugmented(srcdir, MLC, NORM_GT):
         filelists[label] = filelist # store sorted filelist
         labels.append(label)
 
-    # Each non-empty directory in source 'xcf/*', will be augmented.
-    # If the corresponding dir in 'augmented' dir is non-empty, this script will abort.
-    # NOTE: To avoid a certain directory from being augmented, temporarily move it out of the 'xcf' directory 
-    #       before running this script and move back later. This is a workaround for incremental augmentation
-    #       or in the case of a merged 'xcf' directory.
-    for label in labels:
-        tgtdir    = os.path.join(tgtAugdir, label)
-        if os.path.exists(tgtdir):
-            # Make sure that directory is empty. Otherwise quit.
-            flist = os.listdir(tgtdir)
-            if len(flist) > 0:
-                if OnlyLabels:
-                    msgBox("Target dir is not empty. Continuing since OnlyLabels=True", gtk.MESSAGE_ERROR)
-                else:
-                    msgBox("Target dir {} is not empty. Aborting!".format(tgtdir), gtk.MESSAGE_ERROR)
-                    return # quit if non-empty directory is found.
-        else:
-            os.mkdir(tgtdir)
+    if not onlycheckpara:
+        # Each non-empty directory in source 'xcf/*', will be augmented.
+        # If the corresponding dir in 'augmented' dir is non-empty, this script will abort (except if AllowExistingAugDir is True)
+        # NOTE: To avoid a certain sub-directory from being augmented, temporarily move it out of the 'xcf' directory
+        #       before running this script and move back later. This is a workaround for incremental augmentation
+        #       or in the case of a merged 'xcf' directory.
+        for label in labels:
+            tgtdir    = os.path.join(tgtAugdir, label)
+            if os.path.exists(tgtdir):
+                # Make sure that directory is empty. Otherwise quit.
+                flist = os.listdir(tgtdir)
+                if len(flist) > 0:
+                    if AllowExistingAugDir:
+                        msgBox("Target dir is not empty. Continuing since AllowExistingAugDir=True", gtk.MESSAGE_ERROR)
+                    else:
+                        msgBox("Target dir {} is not empty. Aborting!".format(tgtdir), gtk.MESSAGE_ERROR)
+                        return # quit if non-empty directory is found.
+            else:
+                os.mkdir(tgtdir)
 
     # At this point everything is in order. Start the augmentation...
-    msgBox("Working on following directories:\n\t{}".format(labels), gtk.MESSAGE_INFO)
+    msgBox("Will process following directories:\n\t{}".format(labels), gtk.MESSAGE_INFO)
 
     # Find all of the files in the source directory
+    status = True
     for label in labels:
         tgtdir    = os.path.join(tgtAugdir, label)
         srcdir    = os.path.join(xcfdir, label)
         filelist  = filelists[label]
-        print("Augmenting {} directory.".format(label))
-        aug = ImageAugmentor(srcdir, tgtdir, filelist, NP, MLC, OnlyLabels, NORM_GT)
+        print("Processing {} directory.".format(label))
+        aug = ImageAugmentor(srcdir, tgtdir, tgtAnndir, filelist, onlycheckpara)
         if not aug.run():
-            return
-        print("{} directory is augmented.".format(label))
+            status = False
+            break
+        print("{} directory is processed.".format(label))
 
-    print("The augmented PNG files and {} are successfully created in {}".format(LABELFILE, tgtAugdir))
-
-
-
-# For GUI options.
-saveMLC    = False
-normGT     = False # VOC doesn't normalize GT; change if required
+    if status==True:
+        if onlycheckpara:
+            msgBox("The {} directory was successfully checked for parasite data.\nNo errors!".format(xcfdir), gtk.MESSAGE_INFO)
+        else:
+            print("The augmented PNG files and {} are successfully created in {}".format(LABELFILE, tgtAugdir))
+    else:
+        if onlycheckpara:
+            msgBox("There were errors while checking parasite data. See Gimp output.".format(xcfdir), gtk.MESSAGE_ERROR)
+        else:
+            msgBox("There were erros during augmentation!".format(LABELFILE, tgtAugdir), gtk.MESSAGE_ERROR)
 
 #
 ############################################################################
@@ -708,16 +705,15 @@ normGT     = False # VOC doesn't normalize GT; change if required
 register (
     "createAugmented",     # Name registered in Procedure Browser
     "Create augmented images for CNN training (saved as PNG)", # Widget title
-    "Create augmented images for CNN training (saved as PNG).",
+    "Create augmented images for CNN training (saved as PNG). Annotations are saved as XML.",
     "Kiran Maheriya",         # Author
     "Kiran Maheriya",         # Copyright Holder
     "May 2016",               # Date
     "3. Create Augmented Images (PNG)", # Menu Entry
     "",     # Image Type
     [
-    ( PF_DIRNAME, "srcdir", "Source Directory Containing Labeled XCF Images:", origDir ),
-    ( PF_BOOL,    "MLC",    "Save labels in Multi-Label Classification (MLC) format?", saveMLC),
-    ( PF_BOOL,    "NORM_GT", "Normalize NP and BB relative to image size?", normGT),
+    ( PF_DIRNAME, "srcdir",        "Source Directory Containing Labeled XCF Images:", origDir ),
+    ( PF_RADIO,   "onlycheckpara", "Check Parasites or Augment?", 0, (("Augment Images", 0),("Only Check Parasites",1))), # note bool indicates initial setting of buttons
     ],
     [],
     createAugmented,   # Matches to name of function being defined

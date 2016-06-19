@@ -17,6 +17,7 @@ pygtk.require("2.0")
 import gtk
 import gtk.glade
 from gtk import gdk
+
 from pprint import pprint
 
 from dvia_common import *
@@ -24,15 +25,15 @@ from roiCreator import RoiCreator
 
 scriptpath = os.path.dirname(os.path.realpath( __file__ ))
 
-IMG_SIZE_W = 300
-IMG_SIZE_H = 400
+IMG_SIZE_MIN = 300
+IMG_SIZE_MAX = 500
 USE_NP_VISUAL_GRADIENT = True  # Use gradient to visualize NP?
 USE_BB_VISUAL_BORDER   = True  # Use a border in addition to solid overlay for bounding box?
 
 class LabelCreator:
     def __init__(self, img_or_imgdir, single=True):
-        self.single = single
-        self.classes     = dvia_classes
+        self.single  = single
+        self.classes = dvia_classes
         self.bordercolors = dvia_bordercolors
         self.classids = {}
         self.iconTexts = {}
@@ -55,9 +56,12 @@ class LabelCreator:
             if len(self.srcfiles) == 0:
                 self.msgBox("Source directory {} didn't contain any XCF images.".format(self.srcdir), gtk.MESSAGE_ERROR)
                 return
+            self.numfiles = len(self.srcfiles)
             self.srcfiles.sort()
             self.endqueue = len(self.srcfiles) - 1
             self.index = 0
+            self.sliderChanged = False # To indicate change of index by user via slider
+            self.updateSlider  = False # To indicate that slider should be updated due to next/prev button presses
             self.openImage()
         else:
             self.img = img_or_imgdir
@@ -78,6 +82,7 @@ class LabelCreator:
                 "on_next_button_clicked"     : self.next,
                 "on_quit_button_clicked"     : self.quit,
                 "on_addLabelsWindow_destroy" : self.quit,
+                "on_slider_value_changed"    : self.indexChanged,
         }
         self.wtree.connect_signals(funcmap)
 
@@ -92,13 +97,19 @@ class LabelCreator:
         # new
         self.btn_prev     = self.wtree.get_object("prev_button")
         self.btn_next     = self.wtree.get_object("next_button")
+        self.slider       = self.wtree.get_object("slider")
+        self.slider_adj   = self.wtree.get_object("slider_adj")
         self.btn_delNP    = self.wtree.get_object("del_np")
         self.btn_delBB    = self.wtree.get_object("del_bb")
         #
+        self.lbl_imgname  = self.wtree.get_object("imgname_label")
         self.bx_np_bb_add = self.wtree.get_object("bx_np_bb_add")
         self.bx_np_bb_del = self.wtree.get_object("bx_np_bb_del")
         self.initIconView(self.wtree)
         self.win.show_all()
+
+        self.slider_adj.upper = self.numfiles
+
         ## Hide next/prev in single image mode
         if self.single:
             self.btn_prev.hide()
@@ -112,7 +123,7 @@ class LabelCreator:
         if not bb[0]:
             self.msgBox("Mark a selection for the RoI and call me again.", gtk.MESSAGE_ERROR)
             return
-        roi = RoiCreator(self.img, IMG_SIZE_W, IMG_SIZE_H, torgb=True)
+        roi = RoiCreator(self.img, IMG_SIZE_MIN, IMG_SIZE_MAX, torgb=True)
         roi.doit()
         self.saveImage()
         self.setupSingleImage()
@@ -145,16 +156,15 @@ class LabelCreator:
             if self.labels[lbl]:
                 self.lbl = lbl
                 break
-        #print('Objects: ')
-        #pprint(self.objects)
 
     def updateLayout(self):
+        self.lbl_imgname.set_text(self.srcfiles[self.index])
         if not self.hasRoI:
-            self.bx_main.unmap()
+            self.bx_main.hide()
             self.btn_addRoI.show()
             return
 
-        self.bx_main.map()
+        self.bx_main.show()
         self.btn_addRoI.hide()
         # This should be called immediately after opening an image and reading parasite data
         self.updateIconView()
@@ -202,20 +212,30 @@ class LabelCreator:
         gtk.main_quit()
 
     def next(self, widget):
-        if self.index>=self.endqueue:
+        if not self.sliderChanged and self.index>=self.endqueue:
             self.msgBox("This is the last file. No more files in this direction.", gtk.MESSAGE_INFO)
             return
         self.closeImage()
-        self.index += 1
+        self.updateSlider = True
+        if self.sliderChanged:
+            self.sliderChanged = False
+        else:
+            self.index += 1
+            self.slider.set_value(self.index+1) # Update slider
         self.openImage()
         self.updateLayout()
 
     def prev(self, widget):
-        if self.index<=0:
+        if not self.sliderChanged and self.index<=0:
             self.msgBox("This is the first file. No more files in this direction.", gtk.MESSAGE_INFO)
             return
         self.closeImage()
-        self.index -= 1
+        self.updateSlider = True
+        if self.sliderChanged:
+            self.sliderChanged = False
+        else:
+            self.index -= 1
+            self.slider.set_value(self.index+1) # Update slider
         self.openImage()
         self.updateLayout()
 
@@ -241,6 +261,18 @@ class LabelCreator:
             self.msgBox('Image ({}) does not have filename embedded'.format(self.srcfile), gtk.MESSAGE_ERROR)
         pdb.gimp_xcf_save(0, self.img, self.img.active_drawable, self.img.filename, self.img.filename)
         pdb.gimp_image_clean_all(self.img)
+
+    def indexChanged(self, widget):
+        self.slider.set_restrict_to_fill_level(False)
+        self.slider.set_fill_level(self.slider.get_value())
+        self.slider.set_show_fill_level(True)
+        if self.updateSlider:
+            self.updateSlider = False
+            return
+        self.index = int(self.slider.get_value()) - 1
+        self.sliderChanged = True
+        #print 'Slider Changed to {}'.format(self.index+1)
+
 
     def labelChanged(self, lbl):
         '''Called when iconview selection changes
@@ -324,7 +356,9 @@ class LabelCreator:
             return
         #print 'In addNP. Length of self.objects["{}"]={}'.format(self.lbl, len(self.objects[self.lbl]))
         if obj['npLayer']:
-            pdb.gimp_image_remove_layer(self.img, obj['npLayer'])
+            lyr = pdb.gimp_image_get_layer_by_name(self.img, obj['npLayer'])
+            if lyr:
+                pdb.gimp_image_remove_layer(self.img, lyr)
             obj['npLayer'] = None
         lname = "{lbl}_np{idx:d}".format(lbl=self.lbl,idx=obj['index'])
         #print '          Adding {}, index {}'.format(lname, obj['index'])

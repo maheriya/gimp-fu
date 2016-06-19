@@ -1,0 +1,53 @@
+#!/bin/csh -f
+# 
+# A utility to count labeled objects in XML files
+#
+# It is useful to understand how many objects are contained in a database to understand
+# distribution of classes in train.txt or val.txt. For Faster RCNN we use VOC style
+# annotations and list files. This script accepts the list file as input and calculates
+# total number of curb/stair/doorframe classes in the list.
+# 'Annotations' directory is assumed to be where the script is run from.
+
+if ($#argv == 1) then
+  set listfile = $argv[1]
+else
+  echo "Usage: count_objects <labels.txt>"
+  exit(1)
+endif
+## We assume that 'Annotations' directory is present in current directory. Check, though
+if (! -d 'Annotations') then
+  echo "Annotations directory for XML annotations not found"
+  exit(1)
+endif
+
+set val = ( `cat $listfile` )
+#set val =  ( multi_det_00032 multi_det_00161 multi_det_00122 multi_det_00156 multi_det_00144 multi_det_00153 multi_det_00000 multi_det_00116 multi_det_00092 multi_det_00097 multi_det_00036 multi_det_00162 multi_det_00138 multi_det_00068 multi_det_00015 multi_det_00131 multi_det_00005 multi_det_00143 multi_det_00185 multi_det_00150 )
+
+
+@ tc = 0
+@ ts = 0
+@ td = 0
+@ index = 0
+foreach img ( $val )
+  #set imgfile = "Annotations/${img}_00_BASE_IMAGE.xml"
+  set imgfile = "Annotations/${img}.xml"
+  @ c = `grep -c 'name.*curb' $imgfile`
+  @ s = `grep -c 'name.*stair' $imgfile`
+  @ d = `grep -c 'name.*door' $imgfile`
+  @ tc = $tc + $c  
+  @ ts = $ts + $s  
+  @ td = $td + $d  
+  if ($index < 5) then
+    echo "$img"
+    echo "      curb: $c"
+    echo "     stair: $s"
+    echo " doorframe: $d"
+  endif
+  @ index = $index + 1
+end
+echo "===================================================="
+echo "Totals:"
+echo "      curb: $tc"
+echo "     stair: $ts"
+echo " doorframe: $td"
+echo "===================================================="
