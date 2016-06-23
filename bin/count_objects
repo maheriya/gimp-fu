@@ -1,4 +1,4 @@
-#!/bin/csh -f
+#!/bin/tcsh -f
 # 
 # A utility to count labeled objects in XML files
 #
@@ -20,7 +20,7 @@ if (! -d 'Annotations') then
   exit(1)
 endif
 
-set val = ( `cat $listfile` )
+set val = ( `cat $listfile | grep BASE` )
 #set val =  ( multi_det_00032 multi_det_00161 multi_det_00122 multi_det_00156 multi_det_00144 multi_det_00153 multi_det_00000 multi_det_00116 multi_det_00092 multi_det_00097 multi_det_00036 multi_det_00162 multi_det_00138 multi_det_00068 multi_det_00015 multi_det_00131 multi_det_00005 multi_det_00143 multi_det_00185 multi_det_00150 )
 
 

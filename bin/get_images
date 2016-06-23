@@ -1,0 +1,23 @@
+#!/bin/csh -f
+
+if ($#argv != 1) then
+  echo "Usage get_iamges <synset_urls.urls>"
+  exit(1)
+endif
+
+set ufile = $argv[1]
+if (! -f "$ufile" ) then
+  echo "File $ufile doesn't exist."
+  exit(1)
+endif
+set synset = `echo $ufile | sed 's#\.urls##'`
+echo "Downloading $synset"
+if (! -d "$synset" ) then
+  mkdir $synset
+endif
+#cd $synset
+wget -i $ufile --directory-prefix=$synset \
+  -t 3 -nc -c --connect-timeout=10 --wait=1 --waitretry=3 --random-wait \
+  --no-proxy -nd --no-verbose |& tee wget_${synset}.log
+
+echo "Done. Images downloaded in $synset"
