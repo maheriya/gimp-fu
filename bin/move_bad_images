@@ -1,0 +1,25 @@
+#!/bin/csh -f
+
+if ($#argv != 1) then
+  echo "Usage move_bad_images <synset_urls.urls>"
+  exit(1)
+endif
+
+set ufile = $argv[1]
+if (! -f "$ufile" ) then
+  echo "File $ufile doesn't exist."
+  exit(1)
+endif
+set synset = `echo $ufile | sed 's#\.urls##'`
+set bad = ${synset}.bad
+echo "Moving images marked with ## to ${bad}"
+if (! -d "${bad}" ) then
+  mkdir ${bad}
+endif
+
+foreach img ( `cat $ufile | grep '^#'` )
+  set img = `echo $img | sed 's#^.*/##g'`
+  mv ${synset}/$img ${bad}/
+end
+
+echo "Done. Images are moved to ${bad}"

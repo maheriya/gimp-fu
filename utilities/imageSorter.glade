@@ -1,30 +1,10 @@
 <?xml version="1.0" encoding="UTF-8"?>
 <!-- Generated with glade 3.18.3 -->
 <interface>
-  <requires lib="gtk+" version="3.0"/>
-  <object class="GtkListStore" id="liststore_labels">
-    <columns>
-      <!-- column-name Classification -->
-      <column type="gchararray"/>
-    </columns>
-    <data>
-      <row>
-        <col id="0">CatchAll</col>
-      </row>
-      <row>
-        <col id="0">Stair</col>
-      </row>
-      <row>
-        <col id="0">Curb</col>
-      </row>
-      <row>
-        <col id="0">Doorframe</col>
-      </row>
-    </data>
-  </object>
+  <requires lib="gtk+" version="3.6"/>
   <object class="GtkAdjustment" id="slider_adj">
     <property name="lower">1</property>
-    <property name="upper">100</property>
+    <property name="upper">1000</property>
     <property name="value">1</property>
     <property name="step_increment">1</property>
     <property name="page_increment">10</property>
@@ -33,19 +13,15 @@
     <property name="can_focus">False</property>
     <signal name="destroy" handler="on_addLabelsWindow_destroy" swapped="no"/>
     <child>
-      <object class="GtkBox" id="bx_roi_or_labels">
+      <object class="GtkBox" id="bx_main">
         <property name="visible">True</property>
         <property name="can_focus">False</property>
         <property name="orientation">vertical</property>
         <child>
-          <object class="GtkImage" id="image1">
-            <property name="width_request">700</property>
-            <property name="height_request">600</property>
+          <object class="GtkLabel" id="imgname_label_">
+            <property name="height_request">30</property>
             <property name="visible">True</property>
             <property name="can_focus">False</property>
-            <property name="hexpand">False</property>
-            <property name="vexpand">False</property>
-            <property name="stock">gtk-missing-image</property>
           </object>
           <packing>
             <property name="expand">False</property>
@@ -54,117 +30,109 @@
           </packing>
         </child>
         <child>
-          <object class="GtkBox" id="box_main">
+          <object class="GtkFrame" id="image_frame">
             <property name="visible">True</property>
             <property name="can_focus">False</property>
-            <property name="orientation">vertical</property>
+            <property name="halign">center</property>
+            <property name="valign">center</property>
+            <property name="hexpand">False</property>
+            <property name="vexpand">False</property>
+            <property name="label_xalign">0</property>
             <child>
-              <object class="GtkBox" id="bx_sel_label">
+              <object class="GtkAlignment" id="image_alignment">
                 <property name="visible">True</property>
                 <property name="can_focus">False</property>
-                <property name="orientation">vertical</property>
                 <child>
-                  <object class="GtkLabel" id="sel_label">
+                  <object class="GtkBox" id="bx_image_mark">
                     <property name="visible">True</property>
                     <property name="can_focus">False</property>
-                    <property name="yalign">1</property>
-                    <property name="label" translatable="yes">Select a class/label below:</property>
-                  </object>
-                  <packing>
-                    <property name="expand">False</property>
-                    <property name="fill">False</property>
-                    <property name="position">0</property>
-                  </packing>
-                </child>
-                <child>
-                  <object class="GtkScrolledWindow" id="labels_window">
-                    <property name="width_request">450</property>
-                    <property name="height_request">110</property>
-                    <property name="visible">True</property>
-                    <property name="can_focus">True</property>
-                    <property name="hscrollbar_policy">never</property>
-                    <property name="vscrollbar_policy">never</property>
-                    <property name="shadow_type">etched-in</property>
+                    <property name="orientation">vertical</property>
                     <child>
-                      <placeholder/>
-                    </child>
-                  </object>
-                  <packing>
-                    <property name="expand">True</property>
-                    <property name="fill">True</property>
-                    <property name="position">1</property>
-                  </packing>
-                </child>
-                <child>
-                  <object class="GtkBox" id="bx_add_del_label">
-                    <property name="visible">True</property>
-                    <property name="can_focus">False</property>
-                    <property name="homogeneous">True</property>
-                    <child>
-                      <object class="GtkButton" id="add_label">
-                        <property name="label" translatable="yes">Add Selected Label</property>
-                        <property name="width_request">200</property>
+                      <object class="GtkImage" id="main_image">
+                        <property name="width_request">700</property>
+                        <property name="height_request">600</property>
                         <property name="visible">True</property>
-                        <property name="can_focus">True</property>
-                        <property name="receives_default">True</property>
-                        <property name="tooltip_text" translatable="yes">Add selected classification label to the image. addBB/addNP buttons will be enabled. For 'catchall' class label, BB or NP are not applicable.</property>
-                        <property name="border_width">10</property>
-                        <signal name="clicked" handler="on_add_label_clicked" swapped="no"/>
+                        <property name="can_focus">False</property>
+                        <property name="halign">center</property>
+                        <property name="valign">center</property>
+                        <property name="hexpand">False</property>
+                        <property name="vexpand">False</property>
+                        <property name="stock">gtk-missing-image</property>
                       </object>
                       <packing>
                         <property name="expand">False</property>
-                        <property name="fill">False</property>
+                        <property name="fill">True</property>
                         <property name="position">0</property>
                       </packing>
                     </child>
                     <child>
-                      <object class="GtkButton" id="del_label">
-                        <property name="label" translatable="yes">Delete Selected Label</property>
-                        <property name="width_request">200</property>
+                      <object class="GtkGrid" id="info_grid">
                         <property name="visible">True</property>
-                        <property name="can_focus">True</property>
-                        <property name="receives_default">False</property>
-                        <property name="tooltip_text" translatable="yes">Clicking this button will delete ALL the label data. ALL NP and BB parasite data and layers will be removed. Use this to start from scratch for a label.</property>
-                        <property name="border_width">10</property>
-                        <signal name="clicked" handler="on_del_label_clicked" swapped="no"/>
+                        <property name="can_focus">False</property>
+                        <property name="column_homogeneous">True</property>
+                        <child>
+                          <object class="GtkEventBox" id="mark_evbx">
+                            <property name="visible">True</property>
+                            <property name="can_focus">False</property>
+                            <child>
+                              <object class="GtkLabel" id="mark_label">
+                                <property name="visible">True</property>
+                                <property name="can_focus">False</property>
+                                <property name="margin_right">2</property>
+                                <property name="xalign">0</property>
+                                <property name="xpad">5</property>
+                                <property name="label" translatable="yes">mark label</property>
+                              </object>
+                            </child>
+                          </object>
+                          <packing>
+                            <property name="left_attach">0</property>
+                            <property name="top_attach">0</property>
+                          </packing>
+                        </child>
+                        <child>
+                          <object class="GtkEventBox" id="info_evbx">
+                            <property name="visible">True</property>
+                            <property name="can_focus">False</property>
+                            <child>
+                              <object class="GtkLabel" id="info_label">
+                                <property name="visible">True</property>
+                                <property name="can_focus">False</property>
+                                <property name="margin_left">2</property>
+                                <property name="xalign">1</property>
+                                <property name="xpad">5</property>
+                                <property name="label" translatable="yes">info label</property>
+                              </object>
+                            </child>
+                          </object>
+                          <packing>
+                            <property name="left_attach">1</property>
+                            <property name="top_attach">0</property>
+                          </packing>
+                        </child>
                       </object>
                       <packing>
                         <property name="expand">False</property>
-                        <property name="fill">False</property>
+                        <property name="fill">True</property>
                         <property name="position">1</property>
                       </packing>
                     </child>
                   </object>
-                  <packing>
-                    <property name="expand">False</property>
-                    <property name="fill">True</property>
-                    <property name="position">2</property>
-                  </packing>
                 </child>
               </object>
-              <packing>
-                <property name="expand">False</property>
-                <property name="fill">True</property>
-                <property name="position">0</property>
-              </packing>
             </child>
-            <child>
+            <child type="label">
               <object class="GtkLabel" id="imgname_label">
                 <property name="height_request">30</property>
                 <property name="visible">True</property>
                 <property name="can_focus">False</property>
                 <property name="label" translatable="yes">image name</property>
               </object>
-              <packing>
-                <property name="expand">False</property>
-                <property name="fill">True</property>
-                <property name="position">1</property>
-              </packing>
             </child>
           </object>
           <packing>
             <property name="expand">False</property>
-            <property name="fill">True</property>
+            <property name="fill">False</property>
             <property name="position">1</property>
           </packing>
         </child>
@@ -172,17 +140,18 @@
           <object class="GtkBox" id="bx_mark_good_bad">
             <property name="visible">True</property>
             <property name="can_focus">False</property>
+            <property name="halign">start</property>
             <property name="homogeneous">True</property>
             <child>
               <object class="GtkButton" id="mark_good">
-                <property name="label" translatable="yes">Mark Good</property>
+                <property name="label" translatable="yes">Accept</property>
                 <property name="width_request">200</property>
                 <property name="visible">True</property>
                 <property name="can_focus">True</property>
                 <property name="receives_default">True</property>
-                <property name="tooltip_text" translatable="yes">Add selected classification label to the image. addBB/addNP buttons will be enabled. For 'catchall' class label, BB or NP are not applicable.</property>
                 <property name="border_width">10</property>
                 <signal name="clicked" handler="on_mark_good_clicked" swapped="no"/>
+                <accelerator key="a" signal="clicked"/>
               </object>
               <packing>
                 <property name="expand">False</property>
@@ -192,14 +161,14 @@
             </child>
             <child>
               <object class="GtkButton" id="mark_bad">
-                <property name="label" translatable="yes">Mark Bad</property>
+                <property name="label" translatable="yes">Reject</property>
                 <property name="width_request">200</property>
                 <property name="visible">True</property>
                 <property name="can_focus">True</property>
                 <property name="receives_default">False</property>
-                <property name="tooltip_text" translatable="yes">Clicking this button will delete ALL the label data. ALL NP and BB parasite data and layers will be removed. Use this to start from scratch for a label.</property>
                 <property name="border_width">10</property>
                 <signal name="clicked" handler="on_mark_bad_clicked" swapped="no"/>
+                <accelerator key="r" signal="clicked"/>
               </object>
               <packing>
                 <property name="expand">False</property>
@@ -212,6 +181,46 @@
             <property name="expand">False</property>
             <property name="fill">False</property>
             <property name="position">2</property>
+          </packing>
+        </child>
+        <child>
+          <object class="GtkBox" id="bx_move">
+            <property name="visible">True</property>
+            <property name="can_focus">False</property>
+            <child>
+              <object class="GtkButton" id="btn_mvfiles">
+                <property name="label" translatable="yes">Move Bad Files</property>
+                <property name="width_request">200</property>
+                <property name="visible">True</property>
+                <property name="can_focus">True</property>
+                <property name="receives_default">False</property>
+                <property name="tooltip_text" translatable="yes">Clicking this button will move ALL images marked as bad to a directory with '.bad' suffix added to source directory name.</property>
+                <property name="border_width">10</property>
+                <signal name="clicked" handler="on_btn_mvfiles_clicked" swapped="no"/>
+              </object>
+              <packing>
+                <property name="expand">False</property>
+                <property name="fill">False</property>
+                <property name="position">0</property>
+              </packing>
+            </child>
+            <child>
+              <object class="GtkLabel" id="move_label">
+                <property name="visible">True</property>
+                <property name="can_focus">False</property>
+                <property name="label" translatable="yes">Clicking the Move button will actually move files on disk.</property>
+              </object>
+              <packing>
+                <property name="expand">False</property>
+                <property name="fill">True</property>
+                <property name="position">1</property>
+              </packing>
+            </child>
+          </object>
+          <packing>
+            <property name="expand">False</property>
+            <property name="fill">True</property>
+            <property name="position">3</property>
           </packing>
         </child>
         <child>
@@ -235,8 +244,9 @@
                     <property name="valign">end</property>
                     <property name="border_width">2</property>
                     <property name="use_stock">True</property>
-                    <property name="image_position">bottom</property>
+                    <property name="always_show_image">True</property>
                     <signal name="clicked" handler="on_prev_button_clicked" swapped="no"/>
+                    <accelerator key="comma" signal="clicked"/>
                   </object>
                   <packing>
                     <property name="expand">False</property>
@@ -255,8 +265,10 @@
                     <property name="valign">end</property>
                     <property name="border_width">2</property>
                     <property name="use_stock">True</property>
-                    <property name="image_position">bottom</property>
+                    <property name="image_position">right</property>
+                    <property name="always_show_image">True</property>
                     <signal name="clicked" handler="on_next_button_clicked" swapped="no"/>
+                    <accelerator key="period" signal="clicked"/>
                   </object>
                   <packing>
                     <property name="expand">False</property>
@@ -282,9 +294,9 @@
                     <property name="can_focus">True</property>
                     <property name="adjustment">slider_adj</property>
                     <property name="show_fill_level">True</property>
-                    <property name="restrict_to_fill_level">False</property>
                     <property name="round_digits">0</property>
                     <property name="digits">0</property>
+                    <signal name="value-changed" handler="on_slider_value_changed" swapped="no"/>
                   </object>
                   <packing>
                     <property name="expand">False</property>
@@ -304,7 +316,9 @@
                     <property name="border_width">2</property>
                     <property name="use_stock">True</property>
                     <property name="image_position">right</property>
+                    <property name="always_show_image">True</property>
                     <signal name="clicked" handler="on_quit_button_clicked" swapped="no"/>
+                    <accelerator key="q" signal="clicked"/>
                   </object>
                   <packing>
                     <property name="expand">False</property>
@@ -323,7 +337,7 @@
           <packing>
             <property name="expand">False</property>
             <property name="fill">True</property>
-            <property name="position">3</property>
+            <property name="position">4</property>
           </packing>
         </child>
       </object>
