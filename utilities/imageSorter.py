@@ -9,9 +9,10 @@ from gi.repository import GdkPixbuf
 import pickle
 
 scriptpath = os.path.dirname(os.path.realpath( __file__ ))
-color_red    = Gdk.Color(0xdddd, 0x2222, 0x3333)
-color_green  = Gdk.Color(0x2222, 0xdddd, 0x3333)
-color_yellow = Gdk.Color(0xdddd, 0xdddd, 0x3333)
+color_red    = Gdk.Color(0xe100, 0x2400, 0x1000)  ## e12410 red
+color_orange = Gdk.Color(0xe100, 0x5a00, 0x1000)  ## e15a10 orange
+color_yellow = Gdk.Color(0xda00, 0xe600, 0x1600)  ## dae616 yellow
+color_green  = Gdk.Color(0x1600, 0xe600, 0x1f00)  ## 16e61f green
 class ImageSorter:
     def __init__(self, imgdir):
         self.done       = False
@@ -62,9 +63,12 @@ class ImageSorter:
         #
         self.lbl_imgname  = self.wtree.get_object("imgname_label")
         self.lbl_move     = self.wtree.get_object("move_label")
-        self.lbl_mark     = self.wtree.get_object("mark_label")
+        self.lbl_mark     = self.wtree.get_object("mark_label1")
         self.lbl_info     = self.wtree.get_object("info_label")
-        self.mark_evbx    = self.wtree.get_object("mark_evbx") # To change bg color of mark label
+        self.mark_evbx1   = self.wtree.get_object("mark_evbx1") # To change bg color of mark label1
+        self.mark_evbx2   = self.wtree.get_object("mark_evbx2") # To change bg color of mark label2
+        self.mark_evbx3   = self.wtree.get_object("mark_evbx3") # To change bg color of mark label3
+        self.mark_evbx4   = self.wtree.get_object("mark_evbx4") # To change bg color of mark label4
         self.info_evbx    = self.wtree.get_object("info_evbx") # To change bg color of info label
         self.win.show_all()
 
@@ -77,11 +81,12 @@ class ImageSorter:
                 continue
             self.srcfiles.append(fname)
             if not fname in self.flags:
-                # If the flag doesn't exist for this file, add it; assume good
-                self.flags[fname] = True # True: good, False: bad
+                # If the flag doesn't exist for this file, add it;
+                self.flags[fname] = False # True: good, False: bad
         if len(self.srcfiles) == 0:
             self.msgBox("Source directory {} didn't contain any images.".format(self.srcdir), Gtk.MessageType.ERROR)
             return
+        print("There are total {} images".format(len(self.srcfiles)))
         self.badimages = [img for img in self.flags if not self.flags[img]]
         self.numfiles = len(self.srcfiles)
         self.srcfiles.sort()
@@ -96,23 +101,37 @@ class ImageSorter:
         self.lbl_imgname.set_text(self.srcfile)
         self.badimages = [img for img in self.flags if not self.flags[img]]
         cnt = len(self.badimages)
-        self.lbl_move.set_text('{cnt:d} image{s} currently marked as bad.'.format(cnt=cnt, s='' if cnt==1 else 's'))
-        self.lbl_mark.set_text('Currently {ar}'.format(ar='accepted' if self.flags[self.srcfile] else 'rejected'))
+        cntgood = self.numfiles - cnt
+        self.lbl_move.set_text('{cnt:d} image{s} currently marked as bad ({cntgood:d} good image{gs}).'.format(
+            cnt=cnt, s='' if cnt==1 else 's', cntgood=cntgood, gs='' if cntgood==1 else 's'))
+        self.lbl_mark.set_text('{ar}'.format(ar='Accepted' if self.flags[self.srcfile] else 'Rejected'))
         self.lbl_info.set_text('({w}x{h})'.format(w=self.img_width, h=self.img_height))
 
         # Update mark label bg 
         if self.flags[self.srcfile]:
-            self.mark_evbx.modify_bg(Gtk.StateFlags.NORMAL, color_green)
+            self.mark_evbx1.modify_bg(Gtk.StateFlags.NORMAL, color_green)
+            self.mark_evbx2.modify_bg(Gtk.StateFlags.NORMAL, color_green)
+            #self.mark_evbx4.modify_bg(Gtk.StateFlags.NORMAL, color_green)
         else:
-            self.mark_evbx.modify_bg(Gtk.StateFlags.NORMAL, color_red)
+            self.mark_evbx1.modify_bg(Gtk.StateFlags.NORMAL, color_red)
+            self.mark_evbx2.modify_bg(Gtk.StateFlags.NORMAL, color_red)
+            self.mark_evbx3.modify_bg(Gtk.StateFlags.NORMAL, color_red)
+            #self.mark_evbx4.modify_bg(Gtk.StateFlags.NORMAL, color_red)
         # Update info label bg
-        if (self.img_width < 250 or self.img_height < 250):
+        if (self.img_width < 200 or self.img_height < 200):
             self.info_evbx.modify_bg(Gtk.StateFlags.NORMAL, color_red)
-        elif ((self.img_width < 300 and self.img_width >= 250) or
-            (self.img_height < 300 and self.img_height >= 250)):
+            self.mark_evbx3.modify_bg(Gtk.StateFlags.NORMAL, color_red)
+        elif ((self.img_width < 260 and self.img_width >= 200) or
+            (self.img_height < 260 and self.img_height >= 200)):
+            self.info_evbx.modify_bg(Gtk.StateFlags.NORMAL, color_orange)
+            self.mark_evbx3.modify_bg(Gtk.StateFlags.NORMAL, color_orange)
+        elif ((self.img_width < 300 and self.img_width >= 260) or
+            (self.img_height < 300 and self.img_height >= 260)):
             self.info_evbx.modify_bg(Gtk.StateFlags.NORMAL, color_yellow)
+            self.mark_evbx3.modify_bg(Gtk.StateFlags.NORMAL, color_yellow)
         else:
             self.info_evbx.modify_bg(Gtk.StateFlags.NORMAL, color_green)
+            self.mark_evbx3.modify_bg(Gtk.StateFlags.NORMAL, color_green)
         # Update slider max
         self.slider_adj.set_upper(self.numfiles)
         ## Update buttons
@@ -169,14 +188,15 @@ class ImageSorter:
     def markGood(self, widget=None):
         self.flags[self.srcfile] = True
         self.updateLayout()
-        self.saveDB()
+        #self.saveDB()
 
     def markBad(self, widget=None):
         self.flags[self.srcfile] = False
         self.updateLayout()
-        self.saveDB()
+        #self.saveDB()
 
     def moveBadImages(self, widget=None):
+        self.saveDB()
         if not os.path.exists(self.tgtdir):
             os.mkdir(self.tgtdir)
         for fname in self.srcfiles:
@@ -185,24 +205,36 @@ class ImageSorter:
             timg = os.path.join(self.tgtdir, fname)
             if not good and os.path.exists(simg):
                 try:
-                    os.system('mv -f {s} {t}'.format(s=simg, t=timg))
+                    os.system("mv -f '{s}' '{t}'".format(s=simg, t=timg))
                 except:
                     print("Couldn't move {} to {}".format(s=fname, t=self.tgtdir))
                 finally:
                     # Remove the flag from DB
                     del(self.flags[fname])
         self.setupFiles()
+        self.updateSlider = True
+        self.slider.set_value(self.index+1) # Update slider
+
         self.openImage()
         self.updateLayout()
 
     def openImage(self):
         self.srcfile = self.srcfiles[self.index]
-        #print 'Opening {}'.format(self.srcfile)
-        self.image.set_from_file(os.path.join(self.srcdir, self.srcfile))
+        #print 'Opening {} at index {}'.format(self.srcfile, self.index)
+        pixbuf = None
+        try:
+            self.image.set_from_file(os.path.join(self.srcdir, self.srcfile))
+            # get original dimensions
+            pixbuf = self.image.get_pixbuf()
+        except:
+            print 'Error while opening {} at index {}'.format(self.srcfile, self.index)
+            return
 
-        # get original dimensions
-        pixbuf = self.image.get_pixbuf()
-        self.img_width, self.img_height = pixbuf.get_width(), pixbuf.get_height()
+
+        if pixbuf is not None:
+            self.img_width, self.img_height = pixbuf.get_width(), pixbuf.get_height()
+        else:
+            self.img_width, self.img_height = 0, 0
         self.resizeImage()
 
     def closeImage(self):
@@ -234,13 +266,16 @@ class ImageSorter:
 
     def resizeImage(self):
         pixbuf = self.image.get_pixbuf()
-        cur_width, cur_height = pixbuf.get_width(), pixbuf.get_height()
+        if pixbuf is not None:
+            cur_width, cur_height = pixbuf.get_width(), pixbuf.get_height()
+        else:
+            cur_width, cur_height = 0, 0
 
         # Get the size of the widget area
         allocation = self.image.get_allocation()
-        dst_width, dst_height = allocation.width, allocation.height
+        dst_width, dst_height = allocation.width-5, allocation.height-5
 
-        if (cur_width > dst_width and cur_height > dst_height):
+        if (cur_width > dst_width or cur_height > dst_height):
             # Scale preserving aspect
             sc = min(float(dst_width)/cur_width, float(dst_height)/cur_height)
             new_width = int(sc*cur_width)

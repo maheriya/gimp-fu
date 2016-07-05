@@ -37,3 +37,4 @@ with open(lfile, 'r') as f:
             l = f.readline().strip()
             
         
+grep 'URL.* ->' wget_n04297847-stair-carpet.log | egrep -v '.jpg|.JPG|.png|.PNG|.GIF|.gif'

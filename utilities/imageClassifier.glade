@@ -43,21 +43,21 @@
                 <property name="visible">True</property>
                 <property name="can_focus">False</property>
                 <child>
-                  <object class="GtkBox" id="bx_image_and_label">
+                  <object class="GtkBox" id="bx_image_mark">
                     <property name="visible">True</property>
                     <property name="can_focus">False</property>
+                    <property name="orientation">vertical</property>
                     <child>
-                      <object class="GtkEventBox" id="mark_evbx2">
+                      <object class="GtkImage" id="main_image">
+                        <property name="width_request">500</property>
+                        <property name="height_request">400</property>
                         <property name="visible">True</property>
                         <property name="can_focus">False</property>
-                        <child>
-                          <object class="GtkLabel" id="mark_label2">
-                            <property name="width_request">15</property>
-                            <property name="visible">True</property>
-                            <property name="can_focus">False</property>
-                            <property name="xalign">0</property>
-                          </object>
-                        </child>
+                        <property name="halign">center</property>
+                        <property name="valign">center</property>
+                        <property name="hexpand">False</property>
+                        <property name="vexpand">False</property>
+                        <property name="stock">gtk-missing-image</property>
                       </object>
                       <packing>
                         <property name="expand">False</property>
@@ -66,105 +66,88 @@
                       </packing>
                     </child>
                     <child>
-                      <object class="GtkBox" id="bx_image_mark">
+                      <object class="GtkGrid" id="info_grid">
                         <property name="visible">True</property>
                         <property name="can_focus">False</property>
-                        <property name="orientation">vertical</property>
+                        <property name="border_width">2</property>
+                        <property name="row_spacing">2</property>
+                        <property name="column_spacing">8</property>
+                        <property name="row_homogeneous">True</property>
+                        <property name="column_homogeneous">True</property>
                         <child>
-                          <object class="GtkEventBox" id="mark_evbx4">
-                            <property name="height_request">10</property>
+                          <object class="GtkEventBox" id="clsinfo_evbx">
                             <property name="visible">True</property>
                             <property name="can_focus">False</property>
-                            <property name="valign">start</property>
                             <child>
-                              <object class="GtkLabel" id="mark_label4">
-                                <property name="height_request">10</property>
+                              <object class="GtkLabel" id="clsinfo_label">
                                 <property name="visible">True</property>
                                 <property name="can_focus">False</property>
-                                <property name="valign">start</property>
-                                <property name="vexpand">False</property>
-                                <property name="xalign">0</property>
-                                <property name="lines">0</property>
-                                <attributes>
-                                  <attribute name="weight" value="thin"/>
-                                </attributes>
+                                <property name="margin_right">2</property>
+                                <property name="xpad">5</property>
+                                <property name="label" translatable="yes">Suitable for Classification?</property>
+                                <property name="justify">center</property>
                               </object>
                             </child>
                           </object>
                           <packing>
-                            <property name="expand">False</property>
-                            <property name="fill">True</property>
-                            <property name="position">0</property>
+                            <property name="left_attach">0</property>
+                            <property name="top_attach">0</property>
                           </packing>
                         </child>
                         <child>
-                          <object class="GtkImage" id="main_image">
-                            <property name="width_request">700</property>
-                            <property name="height_request">600</property>
+                          <object class="GtkEventBox" id="detinfo_evbx">
                             <property name="visible">True</property>
                             <property name="can_focus">False</property>
-                            <property name="halign">center</property>
-                            <property name="valign">center</property>
-                            <property name="hexpand">False</property>
-                            <property name="vexpand">False</property>
-                            <property name="stock">gtk-missing-image</property>
+                            <child>
+                              <object class="GtkLabel" id="detinfo_label">
+                                <property name="visible">True</property>
+                                <property name="can_focus">False</property>
+                                <property name="margin_left">2</property>
+                                <property name="xpad">5</property>
+                                <property name="label" translatable="yes">Suitable for Detection?</property>
+                              </object>
+                            </child>
                           </object>
                           <packing>
-                            <property name="expand">False</property>
-                            <property name="fill">True</property>
-                            <property name="position">1</property>
+                            <property name="left_attach">1</property>
+                            <property name="top_attach">0</property>
                           </packing>
                         </child>
                         <child>
-                          <object class="GtkGrid" id="info_grid">
+                          <object class="GtkEventBox" id="cls_evbx">
                             <property name="visible">True</property>
                             <property name="can_focus">False</property>
-                            <property name="column_homogeneous">True</property>
                             <child>
-                              <object class="GtkEventBox" id="mark_evbx1">
+                              <object class="GtkLabel" id="cls_label">
                                 <property name="visible">True</property>
                                 <property name="can_focus">False</property>
-                                <child>
-                                  <object class="GtkLabel" id="mark_label1">
-                                    <property name="visible">True</property>
-                                    <property name="can_focus">False</property>
-                                    <property name="margin_right">2</property>
-                                    <property name="xalign">0</property>
-                                    <property name="xpad">5</property>
-                                    <property name="label" translatable="yes">mark label</property>
-                                  </object>
-                                </child>
+                                <property name="xpad">5</property>
+                                <property name="label" translatable="yes">Use for Classification?</property>
+                                <property name="justify">center</property>
                               </object>
-                              <packing>
-                                <property name="left_attach">0</property>
-                                <property name="top_attach">0</property>
-                              </packing>
-                            </child>
-                            <child>
-                              <object class="GtkEventBox" id="info_evbx">
-                                <property name="visible">True</property>
-                                <property name="can_focus">False</property>
-                                <child>
-                                  <object class="GtkLabel" id="info_label">
-                                    <property name="visible">True</property>
-                                    <property name="can_focus">False</property>
-                                    <property name="margin_left">2</property>
-                                    <property name="xalign">1</property>
-                                    <property name="xpad">5</property>
-                                    <property name="label" translatable="yes">info label</property>
-                                  </object>
-                                </child>
-                              </object>
-                              <packing>
-                                <property name="left_attach">1</property>
-                                <property name="top_attach">0</property>
-                              </packing>
                             </child>
                           </object>
                           <packing>
-                            <property name="expand">False</property>
-                            <property name="fill">True</property>
-                            <property name="position">2</property>
+                            <property name="left_attach">0</property>
+                            <property name="top_attach">1</property>
+                          </packing>
+                        </child>
+                        <child>
+                          <object class="GtkEventBox" id="det_evbx">
+                            <property name="visible">True</property>
+                            <property name="can_focus">False</property>
+                            <child>
+                              <object class="GtkLabel" id="det_label">
+                                <property name="visible">True</property>
+                                <property name="can_focus">False</property>
+                                <property name="xpad">5</property>
+                                <property name="label" translatable="yes">Use for Detection?</property>
+                              </object>
+                            </child>
+                          </object>
+                          <packing>
+                            <property name="left_attach">1</property>
+                            <property name="top_attach">1</property>
                           </packing>
                         </child>
                       </object>
@@ -172,25 +155,6 @@
                         <property name="expand">False</property>
                         <property name="fill">True</property>
                         <property name="position">1</property>
-                      </packing>
-                    </child>
-                    <child>
-                      <object class="GtkEventBox" id="mark_evbx3">
-                        <property name="visible">True</property>
-                        <property name="can_focus">False</property>
-                        <child>
-                          <object class="GtkLabel" id="mark_label3">
-                            <property name="width_request">15</property>
-                            <property name="visible">True</property>
-                            <property name="can_focus">False</property>
-                            <property name="xalign">0</property>
-                          </object>
-                        </child>
-                      </object>
-                      <packing>
-                        <property name="expand">False</property>
-                        <property name="fill">True</property>
-                        <property name="position">2</property>
                       </packing>
                     </child>
                   </object>
@@ -213,21 +177,20 @@
           </packing>
         </child>
         <child>
-          <object class="GtkBox" id="bx_mark_good_bad">
+          <object class="GtkBox" id="bx_cls_det">
             <property name="visible">True</property>
             <property name="can_focus">False</property>
-            <property name="halign">start</property>
+            <property name="border_width">2</property>
+            <property name="spacing">10</property>
             <property name="homogeneous">True</property>
             <child>
-              <object class="GtkButton" id="mark_good">
-                <property name="label" translatable="yes">Accept</property>
-                <property name="width_request">200</property>
+              <object class="GtkSwitch" id="cls_switch">
                 <property name="visible">True</property>
                 <property name="can_focus">True</property>
-                <property name="receives_default">True</property>
-                <property name="border_width">10</property>
-                <signal name="clicked" handler="on_mark_good_clicked" swapped="no"/>
-                <accelerator key="a" signal="clicked"/>
+                <property name="active">True</property>
+                <property name="state">True</property>
+                <signal name="state-set" handler="on_cls_switch_state_set" swapped="no"/>
+                <accelerator key="c" signal="activate"/>
               </object>
               <packing>
                 <property name="expand">False</property>
@@ -236,15 +199,11 @@
               </packing>
             </child>
             <child>
-              <object class="GtkButton" id="mark_bad">
-                <property name="label" translatable="yes">Reject</property>
-                <property name="width_request">200</property>
+              <object class="GtkSwitch" id="det_switch">
                 <property name="visible">True</property>
                 <property name="can_focus">True</property>
-                <property name="receives_default">False</property>
-                <property name="border_width">10</property>
-                <signal name="clicked" handler="on_mark_bad_clicked" swapped="no"/>
-                <accelerator key="r" signal="clicked"/>
+                <signal name="state-set" handler="on_det_switch_state_set" swapped="no"/>
+                <accelerator key="d" signal="activate"/>
               </object>
               <packing>
                 <property name="expand">False</property>
@@ -265,13 +224,13 @@
             <property name="can_focus">False</property>
             <child>
               <object class="GtkButton" id="btn_mvfiles">
-                <property name="label" translatable="yes">Move Bad Files</property>
-                <property name="width_request">200</property>
+                <property name="label" translatable="yes">Copy Files</property>
+                <property name="width_request">125</property>
                 <property name="visible">True</property>
                 <property name="can_focus">True</property>
                 <property name="receives_default">False</property>
                 <property name="tooltip_text" translatable="yes">Clicking this button will move ALL images marked as bad to a directory with '.bad' suffix added to source directory name.</property>
-                <property name="border_width">10</property>
+                <property name="border_width">8</property>
                 <signal name="clicked" handler="on_btn_mvfiles_clicked" swapped="no"/>
               </object>
               <packing>
@@ -284,7 +243,7 @@
               <object class="GtkLabel" id="move_label">
                 <property name="visible">True</property>
                 <property name="can_focus">False</property>
-                <property name="label" translatable="yes">Clicking the Move button will actually move files on disk.</property>
+                <property name="label" translatable="yes">Copy button will copy files on disk.</property>
               </object>
               <packing>
                 <property name="expand">False</property>
