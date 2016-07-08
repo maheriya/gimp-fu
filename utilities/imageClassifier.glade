@@ -259,6 +259,65 @@
           </packing>
         </child>
         <child>
+          <object class="GtkGrid" id="grid_sortbuttons">
+            <property name="visible">True</property>
+            <property name="can_focus">False</property>
+            <property name="column_spacing">16</property>
+            <property name="column_homogeneous">True</property>
+            <child>
+              <object class="GtkButton" id="btn_sortcls">
+                <property name="label" translatable="yes">Sort CLS</property>
+                <property name="visible">True</property>
+                <property name="can_focus">True</property>
+                <property name="receives_default">False</property>
+                <property name="tooltip_text" translatable="yes">Clicking this button will move ALL images marked as bad to a directory with '.bad' suffix added to source directory name.</property>
+                <property name="border_width">8</property>
+                <signal name="clicked" handler="on_btn_sortcls_clicked" swapped="no"/>
+              </object>
+              <packing>
+                <property name="left_attach">0</property>
+                <property name="top_attach">0</property>
+              </packing>
+            </child>
+            <child>
+              <object class="GtkButton" id="btn_sortfilenames">
+                <property name="label" translatable="yes">Sort Filenames</property>
+                <property name="visible">True</property>
+                <property name="can_focus">True</property>
+                <property name="receives_default">False</property>
+                <property name="tooltip_text" translatable="yes">Clicking this button will move ALL images marked as bad to a directory with '.bad' suffix added to source directory name.</property>
+                <property name="border_width">8</property>
+                <signal name="clicked" handler="on_btn_sortfilenames_clicked" swapped="no"/>
+              </object>
+              <packing>
+                <property name="left_attach">2</property>
+                <property name="top_attach">0</property>
+              </packing>
+            </child>
+            <child>
+              <object class="GtkButton" id="btn_sortdet">
+                <property name="label" translatable="yes">Sort DET</property>
+                <property name="width_request">125</property>
+                <property name="visible">True</property>
+                <property name="can_focus">True</property>
+                <property name="receives_default">False</property>
+                <property name="tooltip_text" translatable="yes">Clicking this button will move ALL images marked as bad to a directory with '.bad' suffix added to source directory name.</property>
+                <property name="border_width">8</property>
+                <signal name="clicked" handler="on_btn_sortdet_clicked" swapped="no"/>
+              </object>
+              <packing>
+                <property name="left_attach">1</property>
+                <property name="top_attach">0</property>
+              </packing>
+            </child>
+          </object>
+          <packing>
+            <property name="expand">False</property>
+            <property name="fill">True</property>
+            <property name="position">4</property>
+          </packing>
+        </child>
+        <child>
           <object class="GtkBox" id="bx_nav">
             <property name="visible">True</property>
             <property name="can_focus">False</property>
@@ -372,7 +431,7 @@
           <packing>
             <property name="expand">False</property>
             <property name="fill">True</property>
-            <property name="position">4</property>
+            <property name="position">5</property>
           </packing>
         </child>
       </object>

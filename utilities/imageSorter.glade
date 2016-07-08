@@ -213,49 +213,112 @@
           </packing>
         </child>
         <child>
-          <object class="GtkBox" id="bx_mark_good_bad">
+          <object class="GtkGrid" id="main_buttons_grid">
             <property name="visible">True</property>
             <property name="can_focus">False</property>
-            <property name="halign">start</property>
-            <property name="homogeneous">True</property>
+            <property name="hexpand">True</property>
             <child>
-              <object class="GtkButton" id="mark_good">
-                <property name="label" translatable="yes">Accept</property>
-                <property name="width_request">200</property>
+              <object class="GtkBox" id="bx_mark_good_bad">
                 <property name="visible">True</property>
-                <property name="can_focus">True</property>
-                <property name="receives_default">True</property>
-                <property name="border_width">10</property>
-                <signal name="clicked" handler="on_mark_good_clicked" swapped="no"/>
-                <accelerator key="a" signal="clicked"/>
+                <property name="can_focus">False</property>
+                <property name="halign">start</property>
+                <property name="hexpand">True</property>
+                <property name="homogeneous">True</property>
+                <child>
+                  <object class="GtkButton" id="mark_good">
+                    <property name="label" translatable="yes">Accept</property>
+                    <property name="width_request">200</property>
+                    <property name="visible">True</property>
+                    <property name="can_focus">True</property>
+                    <property name="receives_default">True</property>
+                    <property name="border_width">10</property>
+                    <signal name="clicked" handler="on_mark_good_clicked" swapped="no"/>
+                    <accelerator key="a" signal="clicked"/>
+                  </object>
+                  <packing>
+                    <property name="expand">False</property>
+                    <property name="fill">False</property>
+                    <property name="position">0</property>
+                  </packing>
+                </child>
+                <child>
+                  <object class="GtkButton" id="mark_bad">
+                    <property name="label" translatable="yes">Reject</property>
+                    <property name="width_request">200</property>
+                    <property name="visible">True</property>
+                    <property name="can_focus">True</property>
+                    <property name="receives_default">False</property>
+                    <property name="border_width">10</property>
+                    <signal name="clicked" handler="on_mark_bad_clicked" swapped="no"/>
+                    <accelerator key="r" signal="clicked"/>
+                  </object>
+                  <packing>
+                    <property name="expand">False</property>
+                    <property name="fill">False</property>
+                    <property name="position">1</property>
+                  </packing>
+                </child>
               </object>
               <packing>
-                <property name="expand">False</property>
-                <property name="fill">False</property>
-                <property name="position">0</property>
+                <property name="left_attach">0</property>
+                <property name="top_attach">0</property>
               </packing>
             </child>
             <child>
-              <object class="GtkButton" id="mark_bad">
-                <property name="label" translatable="yes">Reject</property>
-                <property name="width_request">200</property>
+              <object class="GtkBox" id="bx_sort_good_bad">
                 <property name="visible">True</property>
-                <property name="can_focus">True</property>
-                <property name="receives_default">False</property>
-                <property name="border_width">10</property>
-                <signal name="clicked" handler="on_mark_bad_clicked" swapped="no"/>
-                <accelerator key="r" signal="clicked"/>
+                <property name="can_focus">False</property>
+                <property name="halign">end</property>
+                <property name="hexpand">True</property>
+                <property name="homogeneous">True</property>
+                <child>
+                  <object class="GtkButton" id="sort_goodbad">
+                    <property name="label" translatable="yes">Sort on Good/Bad</property>
+                    <property name="width_request">200</property>
+                    <property name="visible">True</property>
+                    <property name="can_focus">True</property>
+                    <property name="receives_default">True</property>
+                    <property name="halign">end</property>
+                    <property name="border_width">10</property>
+                    <signal name="clicked" handler="on_sort_goodbad_clicked" swapped="no"/>
+                    <accelerator key="a" signal="clicked"/>
+                  </object>
+                  <packing>
+                    <property name="expand">False</property>
+                    <property name="fill">False</property>
+                    <property name="pack_type">end</property>
+                    <property name="position">0</property>
+                  </packing>
+                </child>
+                <child>
+                  <object class="GtkButton" id="sort_filename">
+                    <property name="label" translatable="yes">Sort on Filename</property>
+                    <property name="width_request">200</property>
+                    <property name="visible">True</property>
+                    <property name="can_focus">True</property>
+                    <property name="receives_default">False</property>
+                    <property name="halign">end</property>
+                    <property name="border_width">10</property>
+                    <signal name="clicked" handler="on_sort_filename_clicked" swapped="no"/>
+                    <accelerator key="r" signal="clicked"/>
+                  </object>
+                  <packing>
+                    <property name="expand">False</property>
+                    <property name="fill">False</property>
+                    <property name="pack_type">end</property>
+                    <property name="position">1</property>
+                  </packing>
+                </child>
               </object>
               <packing>
-                <property name="expand">False</property>
-                <property name="fill">False</property>
-                <property name="position">1</property>
+                <property name="left_attach">1</property>
+                <property name="top_attach">0</property>
               </packing>
             </child>
           </object>
           <packing>
-            <property name="expand">False</property>
-            <property name="fill">False</property>
+            <property name="expand">True</property>
+            <property name="fill">True</property>
             <property name="position">2</property>
           </packing>
         </child>

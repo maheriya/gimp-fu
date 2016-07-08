@@ -51,14 +51,17 @@ class ImageClassifier:
         self.wtree = Gtk.Builder()
         self.wtree.add_from_file(self.gladefile)
         funcmap = {
-                "on_prev_button_clicked"     : self.prev,
-                "on_next_button_clicked"     : self.next,
-                "on_quit_button_clicked"     : self.quit,
-                "on_addLabelsWindow_destroy" : self.quit,
-                "on_cls_switch_state_set"    : self.clsStateChanged,
-                "on_det_switch_state_set"    : self.detStateChanged,
-                "on_btn_mvfiles_clicked"     : self.copyImages,
-                "on_slider_value_changed"    : self.indexChanged,
+                "on_prev_button_clicked"       : self.prev,
+                "on_next_button_clicked"       : self.next,
+                "on_quit_button_clicked"       : self.quit,
+                "on_addLabelsWindow_destroy"   : self.quit,
+                "on_cls_switch_state_set"      : self.clsStateChanged,
+                "on_det_switch_state_set"      : self.detStateChanged,
+                "on_btn_mvfiles_clicked"       : self.copyImages,
+                "on_slider_value_changed"      : self.indexChanged,
+                "on_btn_sortcls_clicked"       : self.sortOnCls,
+                "on_btn_sortdet_clicked"       : self.sortOnDet,
+                "on_btn_sortfilenames_clicked" : self.sortOnFilename,
         }
         self.wtree.connect_signals(funcmap)
 
@@ -113,6 +116,7 @@ class ImageClassifier:
         self.detimages = [img for img in self.det if self.det[img]]
         self.numfiles = len(self.srcfiles)
         self.srcfiles.sort()
+        self.srcfiles_sorted = list(self.srcfiles)
         self.endqueue = len(self.srcfiles) - 1
         self.index = 0
         self.sliderChanged = False # To indicate change of index by user via slider
@@ -323,7 +327,39 @@ class ImageClassifier:
             pixbuf = pixbuf.scale_simple(new_width, new_height, GdkPixbuf.InterpType.BILINEAR)
             self.image.set_from_pixbuf(pixbuf)
 
+    def sortOnCls(self, widget=None):
+        self.sorted = 'CLS'
+        self.clsimages.sort()
+        nonclsimages = [img for img in self.cls if not self.cls[img]]
+        nonclsimages.sort()
+        self.srcfiles = self.clsimages + nonclsimages
+        self.index = 0
+        self.updateSlider = True
+        self.slider.set_value(self.index+1) # Update slider
+        self.openImage()
+        self.updateLayout()
 
+    def sortOnDet(self, widget=None):
+        self.sorted = 'DET'
+        self.detimages.sort()
+        nondetimages = [img for img in self.det if not self.det[img]]
+        nondetimages.sort()
+        self.srcfiles = self.detimages + nondetimages
+        self.index = 0
+        self.updateSlider = True
+        self.slider.set_value(self.index+1) # Update slider
+        self.openImage()
+        self.updateLayout()
+
+    def sortOnFilename(self, widget=None):
+        self.sorted = 'FILENAME'
+        self.srcfiles = self.srcfiles_sorted
+        self.index = 0
+        self.updateSlider = True
+        self.slider.set_value(self.index+1) # Update slider
+        self.openImage()
+        self.updateLayout()
+        
 
 #endclass
 

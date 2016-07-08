@@ -9,6 +9,10 @@ from gi.repository import GdkPixbuf
 import pickle
 
 scriptpath = os.path.dirname(os.path.realpath( __file__ ))
+
+
+INITIAL_STATE_GOOD = True # Whether to assume initial state of the image as good (True) or bad (False)
+
 color_red    = Gdk.Color(0xe100, 0x2400, 0x1000)  ## e12410 red
 color_orange = Gdk.Color(0xe100, 0x5a00, 0x1000)  ## e15a10 orange
 color_yellow = Gdk.Color(0xda00, 0xe600, 0x1600)  ## dae616 yellow
@@ -45,6 +49,8 @@ class ImageSorter:
                 "on_addLabelsWindow_destroy" : self.quit,
                 "on_mark_good_clicked"       : self.markGood,
                 "on_mark_bad_clicked"        : self.markBad,
+                "on_sort_goodbad_clicked"    : self.sortOnGoodBad,
+                "on_sort_filename_clicked"   : self.sortOnFilename,
                 "on_btn_mvfiles_clicked"     : self.moveBadImages,
                 "on_slider_value_changed"    : self.indexChanged,
         }
@@ -55,6 +61,8 @@ class ImageSorter:
         self.image        = self.wtree.get_object("main_image")
         self.btn_mkgood   = self.wtree.get_object("mark_good")
         self.btn_mkbad    = self.wtree.get_object("mark_bad")
+        self.btn_sortg    = self.wtree.get_object("sort_goodbad")
+        self.btn_sortf    = self.wtree.get_object("sort_filename")
         # new
         self.btn_prev     = self.wtree.get_object("prev_button")
         self.btn_next     = self.wtree.get_object("next_button")
@@ -74,6 +82,7 @@ class ImageSorter:
 
     def setupFiles(self):
         self.srcfiles = []
+        self.sorted = 'Filename'
         for fname in os.listdir(self.srcdir):
             ext = os.path.splitext(fname)[1].lower()
             # Find all of the supported files in the srcdir
@@ -82,7 +91,7 @@ class ImageSorter:
             self.srcfiles.append(fname)
             if not fname in self.flags:
                 # If the flag doesn't exist for this file, add it;
-                self.flags[fname] = False # True: good, False: bad
+                self.flags[fname] = INITIAL_STATE_GOOD # True: good, False: bad
         if len(self.srcfiles) == 0:
             self.msgBox("Source directory {} didn't contain any images.".format(self.srcdir), Gtk.MessageType.ERROR)
             return
@@ -90,6 +99,7 @@ class ImageSorter:
         self.badimages = [img for img in self.flags if not self.flags[img]]
         self.numfiles = len(self.srcfiles)
         self.srcfiles.sort()
+        self.srcfiles_sorted = list(self.srcfiles)
         self.endqueue = len(self.srcfiles) - 1
         self.index = 0
         self.sliderChanged = False # To indicate change of index by user via slider
@@ -100,8 +110,11 @@ class ImageSorter:
         ## Update labels text
         self.lbl_imgname.set_text(self.srcfile)
         self.badimages = [img for img in self.flags if not self.flags[img]]
+        self.badimages.sort()
+        self.goodimages = [img for img in self.flags if self.flags[img]]
+        self.goodimages.sort()
         cnt = len(self.badimages)
-        cntgood = self.numfiles - cnt
+        cntgood = len(self.goodimages) #self.numfiles - cnt
         self.lbl_move.set_text('{cnt:d} image{s} currently marked as bad ({cntgood:d} good image{gs}).'.format(
             cnt=cnt, s='' if cnt==1 else 's', cntgood=cntgood, gs='' if cntgood==1 else 's'))
         self.lbl_mark.set_text('{ar}'.format(ar='Accepted' if self.flags[self.srcfile] else 'Rejected'))
@@ -136,6 +149,7 @@ class ImageSorter:
         self.slider_adj.set_upper(self.numfiles)
         ## Update buttons
         self.showButtonsGoodBad()
+        self.showButtonsSort()
 
     def showButtonsGoodBad(self):
         if self.flags[self.srcfile]:
@@ -146,6 +160,18 @@ class ImageSorter:
             self.btn_mkgood.show()
             self.btn_mkgood.map()
             self.btn_mkbad.hide()
+
+    def showButtonsSort(self):
+        if self.sorted == 'Filename':
+            # Sorted on filename order. Show sortg button. Hide sortf button
+            self.btn_sortg.show()
+            self.btn_sortg.map()
+            self.btn_sortf.hide()
+        else:
+            # Sorted on Good/Bad order. Show sortf button. Hide sortg button
+            self.btn_sortf.show()
+            self.btn_sortf.map()
+            self.btn_sortg.hide()
 
     def quit(self, widget=None):
         if not self.done:
@@ -282,6 +308,26 @@ class ImageSorter:
             new_height = int(sc*cur_height)
             pixbuf = pixbuf.scale_simple(new_width, new_height, GdkPixbuf.InterpType.BILINEAR)
             self.image.set_from_pixbuf(pixbuf)
+
+    def sortOnFilename(self, widget=None):
+        self.sorted = 'Filename'
+        self.srcfiles = self.srcfiles_sorted
+        self.index = 0
+        self.updateSlider = True
+        self.slider.set_value(self.index+1) # Update slider
+
+        self.openImage()
+        self.updateLayout()
+        
+    def sortOnGoodBad(self, widget=None):
+        self.sorted = 'GoodBad'
+        self.srcfiles = self.goodimages+self.badimages
+        self.index = 0
+        self.updateSlider = True
+        self.slider.set_value(self.index+1) # Update slider
+
+        self.openImage()
+        self.updateLayout()
 
 #endclass
 
