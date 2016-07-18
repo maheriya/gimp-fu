@@ -20,6 +20,7 @@ from gtk import gdk
 
 from pprint import pprint
 
+import dvia_common as dv
 from dvia_common import *
 from roiCreator import RoiCreator
 
@@ -38,7 +39,35 @@ class LabelCreator:
         self.classids = {}
         self.iconTexts = {}
         self.iconImages = {}
+        self.slider = None
         clsid = 0
+
+        if self.single:
+            self.img        = img_or_imgdir
+            self.srcdir     = os.path.dirname(self.img.filename)
+        else:
+            self.img        = None
+            self.srcdir     = img_or_imgdir
+        ## Look for DB file and use it to bootstrap if it exists
+        self.dbfilename = os.path.join(self.srcdir, dv.DBFILENAME)
+        self.flagsdb = {}
+        if os.path.exists(self.dbfilename):
+            with open(self.dbfilename, 'r') as f:
+                self.flagsdb = pickle.load(f)
+            dbexists = True
+            f.close()
+        else:
+            dbexists = False
+            
+        if not 'ROI' in self.flagsdb:
+            self.flagsdb['ROI']   = {}  # For each image, True: RoI exists; False: RoI doesn't exist
+            self.flagsdb['LDATA'] = {}  # For each image, ldata (dvia_ldata format)
+            self.flagsdb['currFile']  = None       # current working image file name
+            self.flagsdb['indexFilename'] = 0      # current index based on Filename sort.
+            self.flagsdb['indexRoI']      = 0      # current index based on RoI sort.
+            self.flagsdb['currSort']  = 'Filename'
+        self.dbIsOpen = True
+
         for cls in self.classes:
             self.classids[cls] = clsid
             self.iconTexts[cls] = '{}_{}'.format(clsid, cls)
@@ -46,7 +75,6 @@ class LabelCreator:
             clsid += 1
 
         if not self.single:
-            self.srcdir    = img_or_imgdir
             self.srcfiles = []
             for fname in os.listdir(self.srcdir):
                 if not fname.lower().endswith('.xcf'):
@@ -56,17 +84,31 @@ class LabelCreator:
             if len(self.srcfiles) == 0:
                 self.msgBox("Source directory {} didn't contain any XCF images.".format(self.srcdir), gtk.MESSAGE_ERROR)
                 return
+            self.srcfiles_sorted = list(self.srcfiles)
+            self.srcfiles_sorted.sort()  # Keep filename based srcfiles for easy switching
+            ## In case the DB doesn't exist, we need to build it:
+            if not dbexists:
+                self.updateDBFromScratch()
+            self.sortSrcFiles(self.flagsdb['currSort'])
             self.numfiles = len(self.srcfiles)
-            self.srcfiles.sort()
             self.endqueue = len(self.srcfiles) - 1
-            self.index = 0
             self.sliderChanged = False # To indicate change of index by user via slider
-            self.updateSlider  = False # To indicate that slider should be updated due to next/prev button presses
+            self.updateSlider  = True  # To indicate that slider should be updated due to next/prev button presses
             self.openImage()
-        else:
-            self.img = img_or_imgdir
-            self.setupSingleImage()
 
+        self.setupGUI()
+        self.setupSingleImage()
+        self.initIconView(self.wtree)
+        self.win.show_all()
+        ## Hide next/prev in single image mode
+        if self.single:
+            self.btn_prev.hide()
+            self.btn_next.hide()
+            self.slider.hide()
+        self.updateLayout()
+        gtk.main()
+
+    def setupGUI(self):
         self.gladefile = os.path.join(scriptpath, "labelCreator.glade") 
         self.wtree = gtk.Builder()
         self.wtree.add_from_file(self.gladefile)
@@ -81,6 +123,8 @@ class LabelCreator:
                 "on_prev_button_clicked"     : self.prev,
                 "on_next_button_clicked"     : self.next,
                 "on_quit_button_clicked"     : self.quit,
+                "on_sortfilename_button_clicked": self.sortOnFilename,
+                "on_sortroi_button_clicked"  : self.sortOnRoI,
                 "on_addLabelsWindow_destroy" : self.quit,
                 "on_slider_value_changed"    : self.indexChanged,
         }
@@ -105,38 +149,34 @@ class LabelCreator:
         self.lbl_imgname  = self.wtree.get_object("imgname_label")
         self.bx_np_bb_add = self.wtree.get_object("bx_np_bb_add")
         self.bx_np_bb_del = self.wtree.get_object("bx_np_bb_del")
-        self.initIconView(self.wtree)
-        self.win.show_all()
+        if not self.single:
+            self.slider_adj.upper = self.numfiles
 
-        self.slider_adj.upper = self.numfiles
-
-        ## Hide next/prev in single image mode
-        if self.single:
-            self.btn_prev.hide()
-            self.btn_next.hide()
-
-        self.updateLayout()
-        gtk.main()
 
     def addRoI(self, widget):
         bb = pdb.gimp_selection_bounds(self.img)
         if not bb[0]:
-            self.msgBox("Mark a selection for the RoI and call me again.", gtk.MESSAGE_ERROR)
-            return
+            ## Assume that the user wants the whole image to be selected
+            pdb.gimp_selection_all(self.img)
+            bb = pdb.gimp_selection_bounds(self.img)
+            #self.msgBox("Mark a selection for the RoI and call me again.", gtk.MESSAGE_ERROR)
+            #return
         roi = RoiCreator(self.img, IMG_SIZE_MIN, IMG_SIZE_MAX, torgb=True)
         roi.doit()
+        self.flagsdb['ROI'][self.srcfile] = True
         self.saveImage()
         self.setupSingleImage()
         self.updateLayout()
 
     def setupSingleImage(self):
         self.grp = pdb.gimp_image_get_layer_by_name(self.img, 'group')
-        pdb.gimp_image_set_active_layer(self.img, self.grp)
+        pdb.gimp_image_set_active_layer(self.img, pdb.gimp_image_get_layer_by_name(self.img, 'base'))
         ch = pdb.gimp_image_get_channel_by_name(self.img, 'RoI')
         if ch is not None:
             self.hasRoI = True
         else:
             self.hasRoI = False
+        self.flagsdb['ROI'][self.srcfile] = self.hasRoI
         # # Check image for label data. Create an image layer for each label found
         para = self.img.parasite_find('ldata')
         if para:
@@ -146,9 +186,14 @@ class LabelCreator:
         else:
             self.labels = dict(dvia_labels)
             self.layers = dict(dvia_layers)
-            self.ldata = dict(dvia_ldata)
+            self.ldata  = dict(dvia_ldata)
 
         self.objects  = self.ldata['objects']
+        ## Update DB
+        self.flagsdb['LDATA'][self.srcfile] = dict(self.ldata)
+        self.updateDBIndex()
+        if self.slider is not None:
+            self.slider.set_value(self.index+1) # Update slider
 
         self.lbl = ''
         # Find first available label (if any)
@@ -158,7 +203,8 @@ class LabelCreator:
                 break
 
     def updateLayout(self):
-        self.lbl_imgname.set_text(self.srcfiles[self.index])
+        if not self.single:
+            self.lbl_imgname.set_text(self.srcfiles[self.index])
         if not self.hasRoI:
             self.bx_main.hide()
             self.btn_addRoI.show()
@@ -204,10 +250,12 @@ class LabelCreator:
         self.btn_delLabel.map()
 
     def quit(self, widget):
-        #self.saveParasite()
         if not self.single:
             self.closeImage()
-        try:self.win.destroy()
+        if self.dbIsOpen:
+            self.saveDB()
+            self.dbIsOpen = False
+        try   : self.win.destroy()
         except: pass
         gtk.main_quit()
 
@@ -240,9 +288,10 @@ class LabelCreator:
         self.updateLayout()
 
     def openImage(self):
-        self.srcfile = os.path.join(self.srcdir, self.srcfiles[self.index])
+        self.srcfile = self.srcfiles[self.index]
+        self.srcfullpath = os.path.join(self.srcdir, self.srcfile)
         print 'Opening {}'.format(self.srcfile)
-        self.img  = pdb.gimp_file_load(self.srcfile, self.srcfile)
+        self.img  = pdb.gimp_file_load(self.srcfullpath, self.srcfullpath)
         self.disp = pdb.gimp_display_new(self.img)
         self.setupSingleImage()
         
@@ -502,6 +551,77 @@ class LabelCreator:
             self.icon_view.unselect_all()
         else:
             self.icon_view.select_path(self.classids[self.lbl])
+
+    def saveDB(self):
+        try: dbfile = open(self.dbfilename, 'w')
+        except:
+            print('Could not open DB file {}'.format(self.dbfilename))
+            dv.msgBox('Could not open DB file {}'.format(self.dbfilename), gtk.MESSAGE_ERROR)
+            raise
+        pickle.dump(self.flagsdb, dbfile)
+        dbfile.close()
+
+    def updateDBIndex(self):
+        if self.flagsdb['currSort'] == 'Filename':
+            self.flagsdb['indexFilename'] = self.index
+        elif self.flagsdb['currSort'] == 'RoI':
+            self.flagsdb['indexRoI']      = self.index
+
+    def getDBIndex(self):
+        if self.flagsdb['currSort'] == 'Filename':
+            return self.flagsdb['indexFilename']
+        elif self.flagsdb['currSort'] == 'RoI':
+            return self.flagsdb['indexRoI']
+
+    def sortSrcFiles(self, stype='Filename'):
+        '''
+        Implement custom sort here
+        '''
+        if stype == 'Filename':
+            self.sortOnFilename()
+        elif stype == 'RoI':
+            self.sortOnRoI()
+
+    def sortOnFilename(self, widget=None):
+        self.flagsdb['currSort'] = 'Filename'
+        self.srcfiles = self.srcfiles_sorted
+        self.index    = self.getDBIndex()
+        if widget is not None:
+            self.closeImage()
+            self.updateSlider = True
+            self.slider.set_value(self.index+1) # Update slider
+            self.openImage()
+            self.updateLayout()
+
+    def sortOnRoI(self, widget=None):
+        self.flagsdb['currSort'] = 'RoI'
+        self.roiImages = [img for img in self.srcfiles_sorted if self.flagsdb['ROI'][img]]
+        self.roiImages.sort()
+        nonRoiImages = [img for img in self.srcfiles_sorted if not self.flagsdb['ROI'][img]]
+        nonRoiImages.sort()
+        self.srcfiles = self.roiImages + nonRoiImages
+        self.index = len(self.roiImages) # Go to the first nonRoI image
+        if self.index == self.numfiles:
+            self.index -= 1
+        self.updateDBIndex()
+        #print("Number of RoI images = {n}. Index = {i}".format(n=len(self.roiImages), i=self.index))
+        #print("self.roiImages : {}".format(self.roiImages))
+        #print("self.srcfiles sorted on Filename: {}".format(self.srcfiles_sorted))
+        #print("self.srcfiles sorted on RoI: {}".format(self.srcfiles))
+        if widget is not None:
+            self.closeImage()
+            self.updateSlider = True
+            self.slider.set_value(self.index+1) # Update slider
+            self.openImage()
+            self.updateLayout()
+
+    def updateDBFromScratch(self):
+        self.index = 0
+        for f in self.srcfiles_sorted:
+            self.updateSlider = False
+            self.openImage()
+            self.index += 1
+            self.closeImage()
 
 
 #EOF

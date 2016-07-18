@@ -8,7 +8,7 @@ pygtk.require("2.0")
 import gtk
 
 import os
-#import pickle
+import pickle
 #from pprint import pprint
 
 if os.name == 'posix':
@@ -33,7 +33,9 @@ dvia_object  = {'np': (), 'bb': (), 'npLayer': None, 'bbLayer': None, 'index': N
 dvia_ldata =  {'labels': dvia_labels, 'layers': dvia_layers, 'objects': dvia_objects}
 
 
-
+## For JPG/PNG to XCF
+IMG_SMALLER_EDGE_SIZE_MAX = 1000.0  # Clamp smaller edge of the image to this size 
+DBFILENAME = '.xcf.db'
 
 ## Common function definitions
 def msgBox(message, typ=gtk.MESSAGE_INFO, modal=1):
@@ -103,5 +105,59 @@ def createNPVisual(img, lyr, lbl, make_gradient=True):
     pdb.gimp_selection_none(img)
     pdb.gimp_displays_flush()
     return (xc, y2)
+
+## Simple processing when saving Jpg/PNG to Xcf: scale
+def processImage(img):
+    ## Convert to RGB if required
+    if pdb.gimp_image_base_type(img) != 0:  # Not RGB
+        try: pdb.gimp_image_convert_rgb(img)
+        except: pass
+
+    pdb.gimp_image_resize_to_layers(img)
+    smin = min(img.height, img.width)
+    # Clamp smaller edge to specific max size
+    if smin > IMG_SMALLER_EDGE_SIZE_MAX:
+        sscale = float(IMG_SMALLER_EDGE_SIZE_MAX / smin)
+        height = round(img.height*sscale)
+        width  = round(img.width*sscale)
+        pdb.gimp_context_set_interpolation(INTERPOLATION_LANCZOS)
+        try:
+            pdb.gimp_image_scale(img, width, height)
+        except: 
+            print 'Error scaling image {}'.format(img.name)
+
+## Save as XCF after adding 'base' layer and 'grp' group; also add metadata
+def convertToXcf(srcPath, sfile, tgtPath, tfile, ldata):
+    ext = os.path.splitext(sfile.lower())[1]
+    srcFile = os.path.join(srcPath, sfile)
+    tgtFile = os.path.join(tgtPath, tfile)
+    try:
+        if ext == '.png': # PNG file
+            img = pdb.file_png_load(srcFile, srcFile)
+        elif ext == '.gif': # GIF file
+            img = pdb.file_gif_load(srcFile, srcFile)
+        else: # JPEG file
+            img = pdb.file_jpeg_load(srcFile, srcFile)
+    except:
+        dv.msgBox("Cannot open '{t}' file '{f}'".format(f=srcFile, t=ext))
+        pdb.gimp_image_delete(img)
+        raise
+    processImage(img)
+
+    base = pdb.gimp_image_get_active_layer(img)
+    base.name = 'base'
+    ## Create a group
+    grp = pdb.gimp_layer_group_new(img)
+    grp.name = 'group'
+    pdb.gimp_image_insert_layer(img, grp, None, -1) # Insert group into image
+    pdb.gimp_image_reorder_item(img, base, grp, -1) # Move base layer into 'grp' group
+
+
+    img.attach_new_parasite('ldata', 5, pickle.dumps(ldata))
+    drw = img.active_drawable
+    # Set Flag Properties / Parasites
+    pdb.gimp_xcf_save(0, img, drw, tgtFile, tgtFile)
+    pdb.gimp_image_delete(img)
+
 
 #EOF

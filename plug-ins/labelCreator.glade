@@ -1,5 +1,5 @@
 <?xml version="1.0" encoding="UTF-8"?>
-<!-- Generated with glade 3.18.3 -->
+<!-- Generated with glade 3.20.0 -->
 <interface>
   <requires lib="gtk+" version="2.0"/>
   <object class="GtkListStore" id="liststore_labels">
@@ -24,7 +24,7 @@
   </object>
   <object class="GtkAdjustment" id="slider_adj">
     <property name="lower">1</property>
-    <property name="upper">100</property>
+    <property name="upper">3000</property>
     <property name="value">1</property>
     <property name="step_increment">1</property>
     <property name="page_increment">10</property>
@@ -62,8 +62,8 @@
                   <object class="GtkLabel" id="sel_label">
                     <property name="visible">True</property>
                     <property name="can_focus">False</property>
-                    <property name="yalign">1</property>
                     <property name="label" translatable="yes">Select a class/label below:</property>
+                    <property name="yalign">1</property>
                   </object>
                   <packing>
                     <property name="expand">False</property>
@@ -104,6 +104,7 @@
                         <property name="tooltip_text" translatable="yes">Add selected classification label to the image. addBB/addNP buttons will be enabled. For 'catchall' class label, BB or NP are not applicable.</property>
                         <property name="border_width">10</property>
                         <signal name="clicked" handler="on_add_label_clicked" swapped="no"/>
+                        <accelerator key="l" signal="clicked"/>
                       </object>
                       <packing>
                         <property name="expand">False</property>
@@ -120,6 +121,7 @@
                         <property name="tooltip_text" translatable="yes">Clicking this button will delete ALL the label data. ALL NP and BB parasite data and layers will be removed. Use this to start from scratch for a label.</property>
                         <property name="border_width">10</property>
                         <signal name="clicked" handler="on_del_label_clicked" swapped="no"/>
+                        <accelerator key="l" signal="clicked" modifiers="GDK_CONTROL_MASK"/>
                       </object>
                       <packing>
                         <property name="expand">False</property>
@@ -168,6 +170,7 @@
                     <property name="tooltip_text" translatable="yes">Select the class object in the image with selection tools as accurately as you can. After that click this button to add a tight bounding box (BB) for that object.</property>
                     <property name="border_width">2</property>
                     <signal name="clicked" handler="on_add_bb_clicked" swapped="no"/>
+                    <accelerator key="b" signal="clicked"/>
                   </object>
                   <packing>
                     <property name="expand">True</property>
@@ -184,6 +187,7 @@
                     <property name="tooltip_text" translatable="yes">Select the approximate nearest point of the class object in the image by marking a selection and click this button to add the nearest point (NP).</property>
                     <property name="border_width">2</property>
                     <signal name="clicked" handler="on_add_np_clicked" swapped="no"/>
+                    <accelerator key="n" signal="clicked"/>
                   </object>
                   <packing>
                     <property name="expand">True</property>
@@ -212,6 +216,7 @@
                     <property name="tooltip_text" translatable="yes">This will delete ALL bounding box (BB) data for the current label.</property>
                     <property name="border_width">2</property>
                     <signal name="clicked" handler="on_del_bb_clicked" swapped="no"/>
+                    <accelerator key="b" signal="clicked" modifiers="GDK_CONTROL_MASK"/>
                   </object>
                   <packing>
                     <property name="expand">True</property>
@@ -228,6 +233,7 @@
                     <property name="tooltip_text" translatable="yes">This will delete ALL nearest point (NP) data for the current label.</property>
                     <property name="border_width">2</property>
                     <signal name="clicked" handler="on_del_np_clicked" swapped="no"/>
+                    <accelerator key="n" signal="clicked" modifiers="GDK_CONTROL_MASK"/>
                   </object>
                   <packing>
                     <property name="expand">True</property>
@@ -269,6 +275,7 @@
             <property name="tooltip_text" translatable="yes">This image doesn't have RoI defined. Select an RoI using selection tool and click this button to add RoI and scale image appropriately.</property>
             <property name="border_width">4</property>
             <signal name="clicked" handler="on_add_roi_clicked" swapped="no"/>
+            <accelerator key="r" signal="clicked"/>
           </object>
           <packing>
             <property name="expand">True</property>
@@ -277,27 +284,26 @@
           </packing>
         </child>
         <child>
-          <object class="GtkHBox" id="bx_nav">
+          <object class="GtkVBox" id="bx_sort_and_nav">
             <property name="visible">True</property>
             <property name="can_focus">False</property>
-            <property name="homogeneous">True</property>
             <child>
-              <object class="GtkHBox" id="bx_prev_next">
+              <object class="GtkHBox" id="bx_sort">
                 <property name="visible">True</property>
                 <property name="can_focus">False</property>
+                <property name="spacing">4</property>
                 <property name="homogeneous">True</property>
                 <child>
-                  <object class="GtkButton" id="prev_button">
-                    <property name="label">gtk-media-previous</property>
+                  <object class="GtkButton" id="sortroi_button">
+                    <property name="label">Sort on RoI</property>
                     <property name="width_request">100</property>
-                    <property name="height_request">30</property>
                     <property name="visible">True</property>
                     <property name="can_focus">True</property>
                     <property name="receives_default">True</property>
-                    <property name="border_width">2</property>
-                    <property name="use_stock">True</property>
+                    <property name="border_width">4</property>
                     <property name="image_position">bottom</property>
-                    <signal name="clicked" handler="on_prev_button_clicked" swapped="no"/>
+                    <signal name="clicked" handler="on_sortroi_button_clicked" swapped="no"/>
+                    <accelerator key="r" signal="clicked" modifiers="GDK_MOD1_MASK"/>
                   </object>
                   <packing>
                     <property name="expand">False</property>
@@ -306,17 +312,17 @@
                   </packing>
                 </child>
                 <child>
-                  <object class="GtkButton" id="next_button">
-                    <property name="label">gtk-media-next</property>
+                  <object class="GtkButton" id="sortfilename_button">
+                    <property name="label">Sort on Filename</property>
                     <property name="width_request">100</property>
                     <property name="height_request">30</property>
                     <property name="visible">True</property>
                     <property name="can_focus">True</property>
                     <property name="receives_default">True</property>
-                    <property name="border_width">2</property>
-                    <property name="use_stock">True</property>
+                    <property name="border_width">4</property>
                     <property name="image_position">bottom</property>
-                    <signal name="clicked" handler="on_next_button_clicked" swapped="no"/>
+                    <signal name="clicked" handler="on_sortfilename_button_clicked" swapped="no"/>
+                    <accelerator key="f" signal="clicked" modifiers="GDK_MOD1_MASK"/>
                   </object>
                   <packing>
                     <property name="expand">False</property>
@@ -327,25 +333,62 @@
               </object>
               <packing>
                 <property name="expand">False</property>
-                <property name="fill">True</property>
+                <property name="fill">False</property>
                 <property name="position">0</property>
               </packing>
             </child>
             <child>
-              <object class="GtkHBox" id="bx_quit">
+              <object class="GtkHBox" id="bx_nav">
                 <property name="visible">True</property>
                 <property name="can_focus">False</property>
                 <property name="homogeneous">True</property>
                 <child>
-                  <object class="GtkHScale" id="slider">
+                  <object class="GtkHBox" id="bx_prev_next">
                     <property name="visible">True</property>
-                    <property name="can_focus">True</property>
-                    <property name="adjustment">slider_adj</property>
-                    <property name="show_fill_level">True</property>
-                    <property name="restrict_to_fill_level">False</property>
-                    <property name="round_digits">1</property>
-                    <property name="digits">0</property>
-                    <signal name="value-changed" handler="on_slider_value_changed" swapped="no"/>
+                    <property name="can_focus">False</property>
+                    <property name="homogeneous">True</property>
+                    <child>
+                      <object class="GtkButton" id="prev_button">
+                        <property name="label">gtk-media-previous</property>
+                        <property name="width_request">100</property>
+                        <property name="height_request">30</property>
+                        <property name="visible">True</property>
+                        <property name="can_focus">True</property>
+                        <property name="receives_default">True</property>
+                        <property name="border_width">2</property>
+                        <property name="use_stock">True</property>
+                        <property name="image_position">bottom</property>
+                        <signal name="clicked" handler="on_prev_button_clicked" swapped="no"/>
+                        <accelerator key="Page_Up" signal="clicked"/>
+                        <accelerator key="comma" signal="clicked"/>
+                      </object>
+                      <packing>
+                        <property name="expand">False</property>
+                        <property name="fill">True</property>
+                        <property name="position">0</property>
+                      </packing>
+                    </child>
+                    <child>
+                      <object class="GtkButton" id="next_button">
+                        <property name="label">gtk-media-next</property>
+                        <property name="width_request">100</property>
+                        <property name="height_request">30</property>
+                        <property name="visible">True</property>
+                        <property name="can_focus">True</property>
+                        <property name="receives_default">True</property>
+                        <property name="border_width">2</property>
+                        <property name="use_stock">True</property>
+                        <property name="image_position">bottom</property>
+                        <signal name="clicked" handler="on_next_button_clicked" swapped="no"/>
+                        <accelerator key="Page_Down" signal="clicked"/>
+                        <accelerator key="period" signal="clicked"/>
+                      </object>
+                      <packing>
+                        <property name="expand">False</property>
+                        <property name="fill">True</property>
+                        <property name="position">1</property>
+                      </packing>
+                    </child>
                   </object>
                   <packing>
                     <property name="expand">False</property>
@@ -354,17 +397,47 @@
                   </packing>
                 </child>
                 <child>
-                  <object class="GtkButton" id="quit_button">
-                    <property name="label">gtk-quit</property>
-                    <property name="width_request">100</property>
-                    <property name="height_request">30</property>
+                  <object class="GtkHBox" id="bx_quit">
                     <property name="visible">True</property>
-                    <property name="can_focus">True</property>
-                    <property name="receives_default">True</property>
-                    <property name="border_width">2</property>
-                    <property name="use_stock">True</property>
-                    <property name="image_position">right</property>
-                    <signal name="clicked" handler="on_quit_button_clicked" swapped="no"/>
+                    <property name="can_focus">False</property>
+                    <property name="homogeneous">True</property>
+                    <child>
+                      <object class="GtkHScale" id="slider">
+                        <property name="visible">True</property>
+                        <property name="can_focus">True</property>
+                        <property name="adjustment">slider_adj</property>
+                        <property name="show_fill_level">True</property>
+                        <property name="restrict_to_fill_level">False</property>
+                        <property name="round_digits">1</property>
+                        <property name="digits">0</property>
+                        <signal name="value-changed" handler="on_slider_value_changed" swapped="no"/>
+                      </object>
+                      <packing>
+                        <property name="expand">False</property>
+                        <property name="fill">True</property>
+                        <property name="position">0</property>
+                      </packing>
+                    </child>
+                    <child>
+                      <object class="GtkButton" id="quit_button">
+                        <property name="label">gtk-quit</property>
+                        <property name="width_request">100</property>
+                        <property name="height_request">30</property>
+                        <property name="visible">True</property>
+                        <property name="can_focus">True</property>
+                        <property name="receives_default">True</property>
+                        <property name="border_width">2</property>
+                        <property name="use_stock">True</property>
+                        <property name="image_position">right</property>
+                        <signal name="clicked" handler="on_quit_button_clicked" swapped="no"/>
+                        <accelerator key="q" signal="clicked"/>
+                      </object>
+                      <packing>
+                        <property name="expand">False</property>
+                        <property name="fill">True</property>
+                        <property name="position">1</property>
+                      </packing>
+                    </child>
                   </object>
                   <packing>
                     <property name="expand">False</property>
@@ -375,14 +448,14 @@
               </object>
               <packing>
                 <property name="expand">False</property>
-                <property name="fill">True</property>
+                <property name="fill">False</property>
                 <property name="position">1</property>
               </packing>
             </child>
           </object>
           <packing>
             <property name="expand">False</property>
-            <property name="fill">False</property>
+            <property name="fill">True</property>
             <property name="position">3</property>
           </packing>
         </child>

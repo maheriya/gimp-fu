@@ -46,7 +46,7 @@ class RoiCreator:
         im_size_max = max(roi_w, roi_h)
         aspect = float(im_size_min)/float(im_size_max)
         ASPECT_MIN = float(self.imgmin)/float(self.imgmax)              # For example, 300/500 = 0.60
-        ASPECT_MAX = PREFERRED_ASPECT + (PREFERRED_ASPECT - ASPECT_MIN) # For example, 300/400 + (300/400 - 300/500) = 0.90 
+        ASPECT_MAX = 1.0 #PREFERRED_ASPECT + (PREFERRED_ASPECT - ASPECT_MIN) # For example, 300/400 + (300/400 - 300/500) = 0.90 
         nh = roi_h
         nw = roi_w
         #print 'aspect={}, ASPECT_MIN={}, ASPECT_MAX={}'.format(aspect, ASPECT_MIN, ASPECT_MAX)
@@ -101,7 +101,7 @@ class RoiCreator:
         #print 'New size: w:{}, h:{}'.format(nw,nh)
         pdb.gimp_selection_none(self.img)
         try:
-            pdb.gimp_image_set_active_layer(self.img, pdb.gimp_image_get_layer_by_name(self.img, 'group'))
+            pdb.gimp_image_set_active_layer(self.img, pdb.gimp_image_get_layer_by_name(self.img, 'base'))
         except:
             pass
 

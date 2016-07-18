@@ -10,6 +10,7 @@
     <property name="page_increment">10</property>
   </object>
   <object class="GtkWindow" id="addLabelsWindow">
+    <property name="width_request">600</property>
     <property name="can_focus">False</property>
     <signal name="destroy" handler="on_addLabelsWindow_destroy" swapped="no"/>
     <child>
@@ -99,8 +100,8 @@
                         </child>
                         <child>
                           <object class="GtkImage" id="main_image">
-                            <property name="width_request">700</property>
-                            <property name="height_request">600</property>
+                            <property name="width_request">600</property>
+                            <property name="height_request">500</property>
                             <property name="visible">True</property>
                             <property name="can_focus">False</property>
                             <property name="halign">center</property>
@@ -216,7 +217,6 @@
           <object class="GtkGrid" id="main_buttons_grid">
             <property name="visible">True</property>
             <property name="can_focus">False</property>
-            <property name="hexpand">True</property>
             <child>
               <object class="GtkBox" id="bx_mark_good_bad">
                 <property name="visible">True</property>
@@ -227,11 +227,11 @@
                 <child>
                   <object class="GtkButton" id="mark_good">
                     <property name="label" translatable="yes">Accept</property>
-                    <property name="width_request">200</property>
+                    <property name="width_request">140</property>
                     <property name="visible">True</property>
                     <property name="can_focus">True</property>
                     <property name="receives_default">True</property>
-                    <property name="border_width">10</property>
+                    <property name="border_width">5</property>
                     <signal name="clicked" handler="on_mark_good_clicked" swapped="no"/>
                     <accelerator key="a" signal="clicked"/>
                   </object>
@@ -244,11 +244,11 @@
                 <child>
                   <object class="GtkButton" id="mark_bad">
                     <property name="label" translatable="yes">Reject</property>
-                    <property name="width_request">200</property>
+                    <property name="width_request">140</property>
                     <property name="visible">True</property>
                     <property name="can_focus">True</property>
                     <property name="receives_default">False</property>
-                    <property name="border_width">10</property>
+                    <property name="border_width">5</property>
                     <signal name="clicked" handler="on_mark_bad_clicked" swapped="no"/>
                     <accelerator key="r" signal="clicked"/>
                   </object>
@@ -273,15 +273,15 @@
                 <property name="homogeneous">True</property>
                 <child>
                   <object class="GtkButton" id="sort_goodbad">
-                    <property name="label" translatable="yes">Sort on Good/Bad</property>
-                    <property name="width_request">200</property>
+                    <property name="label" translatable="yes">Sort (type)</property>
+                    <property name="width_request">140</property>
                     <property name="visible">True</property>
                     <property name="can_focus">True</property>
                     <property name="receives_default">True</property>
                     <property name="halign">end</property>
-                    <property name="border_width">10</property>
+                    <property name="border_width">5</property>
                     <signal name="clicked" handler="on_sort_goodbad_clicked" swapped="no"/>
-                    <accelerator key="a" signal="clicked"/>
+                    <accelerator key="t" signal="clicked"/>
                   </object>
                   <packing>
                     <property name="expand">False</property>
@@ -292,15 +292,15 @@
                 </child>
                 <child>
                   <object class="GtkButton" id="sort_filename">
-                    <property name="label" translatable="yes">Sort on Filename</property>
-                    <property name="width_request">200</property>
+                    <property name="label" translatable="yes">Sort (names)</property>
+                    <property name="width_request">140</property>
                     <property name="visible">True</property>
                     <property name="can_focus">True</property>
                     <property name="receives_default">False</property>
                     <property name="halign">end</property>
-                    <property name="border_width">10</property>
+                    <property name="border_width">5</property>
                     <signal name="clicked" handler="on_sort_filename_clicked" swapped="no"/>
-                    <accelerator key="r" signal="clicked"/>
+                    <accelerator key="n" signal="clicked"/>
                   </object>
                   <packing>
                     <property name="expand">False</property>
@@ -329,12 +329,12 @@
             <child>
               <object class="GtkButton" id="btn_mvfiles">
                 <property name="label" translatable="yes">Move Bad Files</property>
-                <property name="width_request">200</property>
+                <property name="width_request">180</property>
                 <property name="visible">True</property>
                 <property name="can_focus">True</property>
                 <property name="receives_default">False</property>
                 <property name="tooltip_text" translatable="yes">Clicking this button will move ALL images marked as bad to a directory with '.bad' suffix added to source directory name.</property>
-                <property name="border_width">10</property>
+                <property name="border_width">5</property>
                 <signal name="clicked" handler="on_btn_mvfiles_clicked" swapped="no"/>
               </object>
               <packing>

@@ -61,7 +61,7 @@ register (
     "Kiran Maheriya",         # Author
     "Kiran Maheriya",         # Copyright Holder
     "March 2016",             # Date
-    "a. Set RoI",         # Menu Entry
+    "b. Set RoI",         # Menu Entry
     "",     # Image Type - No Image Loaded
     [
     ],
