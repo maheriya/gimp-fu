@@ -81,8 +81,8 @@ class ImageAugmentor:
         self.labels = self.ldata['labels']
         self.layers = self.ldata['layers']
         if self.labels['catchall']:
-            self.nps = {'catchall' : (self.img.width/2, self.img.height/2),  'stair' : (), 'curb' : () }
-            self.bbs = {'catchall' : (0,0, self.img.width, self.img.height), 'stair' : (), 'curb' : () }
+            self.nps = {'catchall' : (self.img.width/2, self.img.height/2),  'stair' : (), 'curb' : (), 'doorframe': () }
+            self.bbs = {'catchall' : (0,0, self.img.width, self.img.height), 'stair' : (), 'curb' : (), 'doorframe': () }
             self.ldata['NP'] = self.nps
             self.ldata['BB'] = self.bbs
             self.img.attach_new_parasite('ldata', 5, pickle.dumps(self.ldata)) # Update the image parasites for later use 

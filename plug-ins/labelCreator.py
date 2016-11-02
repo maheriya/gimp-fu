@@ -26,8 +26,6 @@ from roiCreator import RoiCreator
 
 scriptpath = os.path.dirname(os.path.realpath( __file__ ))
 
-IMG_SIZE_MIN = 300
-IMG_SIZE_MAX = 500
 USE_NP_VISUAL_GRADIENT = True  # Use gradient to visualize NP?
 USE_BB_VISUAL_BORDER   = True  # Use a border in addition to solid overlay for bounding box?
 
@@ -89,8 +87,8 @@ class LabelCreator:
             ## In case the DB doesn't exist, we need to build it:
             if not dbexists:
                 self.updateDBFromScratch()
-            self.sortSrcFiles(self.flagsdb['currSort'])
             self.numfiles = len(self.srcfiles)
+            self.sortSrcFiles(self.flagsdb['currSort'])
             self.endqueue = len(self.srcfiles) - 1
             self.sliderChanged = False # To indicate change of index by user via slider
             self.updateSlider  = True  # To indicate that slider should be updated due to next/prev button presses

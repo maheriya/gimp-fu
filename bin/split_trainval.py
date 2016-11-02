@@ -10,28 +10,31 @@ import glob
 import random
 import re
 
-if len(sys.argv) != 2:
-    print '\nUsage split_trainval.py <full/path/to/labels_file.txt>\n'
-    sys.exit(1)
+## Run this in the 'png' directory where other links are already created appropriately.
+## For example, 'png' directory may look like following (from ls -l output):
+##  Annotations -> ../Annotations/
+##  1_stair     -> ../augmented/1_stair/
+##  2_curb      -> ../augmented/2_curb/
+##  3_doorframe -> ../augmented/3_doorframe/
+##
+def openLabels():
 
-labels_file = os.path.realpath(sys.argv[1])
-
-if not os.path.exists(labels_file):
-    print 'Labels file {} does not exist!'
-    sys.exit(1)
-
-def openLabels(labels_file):
     ###
-    pngdir  = os.path.dirname(labels_file)
-    pngdir  = '/'.join(pngdir.split('/')[:-1])
-    imgsetsdir = os.path.join(pngdir, 'ImageSets')
+    imgsetsdir = 'ImageSets'  ## This will be created to save train.txt and val.txt
     vlabels = []
     tlabels = []
-    filePtr = open(labels_file, 'r')
+
+    filelist = glob.glob('./*/labels.txt')
+    print("Files: {}".format(filelist))
     labels = []
-    for line in filePtr.readlines():
-        img = line.strip().split()[0]
-        labels.append('.'.join(img.split('.')[:-1]))
+    for filename in filelist:
+        dname = os.path.dirname(filename).split('/')[-1]
+        #print dname
+        filePtr = open(filename, 'r')
+        for line in filePtr.readlines():
+            img = line.strip().split()[0]
+            label = '.'.join(img.split('.')[:-1]) ## Remove extension
+            labels.append(os.path.join(dname,label))
     print 'Found {} labels.'.format(len(labels))
                       
     random.shuffle(labels)
@@ -41,8 +44,7 @@ def openLabels(labels_file):
     while(cval<nval):
         random_index = random.randrange(0, (len(labels)-1))
         # Handle augmented images: Once an image is selected, select all related augmented images too.
-        imgindex = labels[random_index].split('_')[0:3]  ## For names containing id_class (e.g. 0_catchall_00000_09_pan2.png)
-        #imgindex = labels[random_index].split('_')[0:1]   ## For names not containing id_class (e.g., 00007_09_pan2.png)
+        imgindex = labels[random_index].split('_')[0:4]  ## For names containing id_class (e.g. 1_stair/1_stair_00000_09_pan2.png)
         imgindex = '_'.join(imgindex)
         print 'Selected for val: {}'.format(imgindex)
 
@@ -65,4 +67,4 @@ def openLabels(labels_file):
     outFile.write('\n'.join(vlabels))
     outFile.close()
     
-openLabels(labels_file)
+openLabels()

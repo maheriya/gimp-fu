@@ -32,6 +32,9 @@ dvia_object  = {'np': (), 'bb': (), 'npLayer': None, 'bbLayer': None, 'index': N
 
 dvia_ldata =  {'labels': dvia_labels, 'layers': dvia_layers, 'objects': dvia_objects}
 
+# LabelCreator and RoI
+IMG_SIZE_MIN = 300
+IMG_SIZE_MAX = 500
 
 ## For JPG/PNG to XCF
 IMG_SMALLER_EDGE_SIZE_MAX = 1000.0  # Clamp smaller edge of the image to this size 
@@ -131,6 +134,7 @@ def convertToXcf(srcPath, sfile, tgtPath, tfile, ldata):
     ext = os.path.splitext(sfile.lower())[1]
     srcFile = os.path.join(srcPath, sfile)
     tgtFile = os.path.join(tgtPath, tfile)
+    img = None
     try:
         if ext == '.png': # PNG file
             img = pdb.file_png_load(srcFile, srcFile)
@@ -139,8 +143,9 @@ def convertToXcf(srcPath, sfile, tgtPath, tfile, ldata):
         else: # JPEG file
             img = pdb.file_jpeg_load(srcFile, srcFile)
     except:
-        dv.msgBox("Cannot open '{t}' file '{f}'".format(f=srcFile, t=ext))
-        pdb.gimp_image_delete(img)
+        msgBox("Cannot open '{t}' file '{f}'".format(f=srcFile, t=ext))
+        if img is not None:
+            pdb.gimp_image_delete(img)
         raise
     processImage(img)
 
