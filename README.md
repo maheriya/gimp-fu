@@ -5,7 +5,7 @@ Gimp Scripts (python) for AeVA (http://www.vasuyantra.com/aeva). These are gener
 
 I developed this to label the images for AeVA early on when opensource image labelling software was not readily available. At this point, image labeling suites are easily available and I don't recommend these scripts. However, these may still be useful for image augmentation especially for augmentations that can change image/bounding box dimensions.
 
-
+Open-sourced in March 2020.
 
 To use scripts from this directory, create a soft link to the 'plug-ins' directory in ${HOME}/.gimp-{version}
 
